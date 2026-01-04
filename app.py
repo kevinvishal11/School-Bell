@@ -17,13 +17,19 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-# For DB, we want it to persist next to the EXE, not in temp folder
-DB_PATH = os.path.join(os.path.abspath("."), "lram.db")
-SOUNDS_DIR = resource_path("sounds")
+def get_writable_dir():
+    """ Get the directory where the EXE is located (for DB and logs) """
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.abspath(os.path.dirname(__file__))
+
+# Data that persists (DB, Uploaded Sounds)
+WRITABLE_DIR = get_writable_dir()
+DB_PATH = os.path.join(WRITABLE_DIR, "lram.db")
+SOUNDS_DIR = os.path.join(WRITABLE_DIR, "sounds")
 os.makedirs(SOUNDS_DIR, exist_ok=True)
 
-# Update Flask to use resource_path for templates and static
+# Update Flask to use resource_path for templates and static (Bundled assets)
 app = Flask(__name__, 
             static_folder=resource_path("static"), 
             template_folder=resource_path("templates"))
@@ -411,4 +417,4 @@ if __name__ == "__main__":
         t = threading.Thread(target=scheduler_loop, daemon=True)
         t.start()
 
-    app.run(host="0.0.0.0", port=8080, debug=debug_mode)
+    app.run(host="0.0.0.0", port=5050, debug=debug_mode)
