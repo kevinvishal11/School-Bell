@@ -17,9 +17,21 @@
     <div class="overlay-content">
       <h1>School Bell System Locked</h1>
       <p>Your license has expired.</p>
-      <p>Please contact support or enter your admin password to renew.</p>
-      <input type="password" id="admin-pass" placeholder="Admin Password">
-      <button onclick="renewLicense()">Renew License</button>
+
+      <!-- Step 1: Authentication -->
+      <div id="renew-step-1">
+        <p>Please enter admin password to begin renewal.</p>
+        <input type="password" id="renew-admin-pass" placeholder="Admin Password">
+        <button onclick="renewVerify()">Next</button>
+      </div>
+
+      <!-- Step 2: Date Selection -->
+      <div id="renew-step-2" style="display:none;">
+        <p>Please select the next expiry date.</p>
+        <input type="date" id="renew-next-date">
+        <button onclick="renewSetDate()">Complete Renewal</button>
+      </div>
+
       <div id="renew-msg"></div>
     </div>
   </div>

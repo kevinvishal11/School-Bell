@@ -337,6 +337,13 @@ async function checkLicense() {
     const overlay = document.getElementById("license-overlay");
     if (json.status === "expired") {
       overlay.style.display = "flex";
+      // Ensure we are on Step 1 when it first appears
+      if (document.getElementById("renew-step-1").style.display === "none" &&
+        document.getElementById("renew-step-2").style.display === "none") {
+        document.getElementById("renew-step-1").style.display = "block";
+        document.getElementById("renew-step-2").style.display = "none";
+        document.getElementById("renew-msg").innerText = "";
+      }
       // Auto-stop any playing sound
       stopSound();
     } else {
@@ -347,16 +354,57 @@ async function checkLicense() {
   }
 }
 
-async function renewLicense() {
-  const pwd = document.getElementById("admin-pass").value;
+// Multi-step Renewal (Lock Screen)
+let renewPassword = null;
+
+async function renewVerify() {
+  const pwd = document.getElementById("renew-admin-pass").value;
   const msg = document.getElementById("renew-msg");
+
   msg.innerText = "Verifying...";
+  msg.style.color = "white";
 
   try {
-    const res = await fetch("/api/renew_license", {
+    const res = await fetch("/api/verify_admin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password: pwd })
+    });
+    const json = await res.json();
+
+    if (json.success) {
+      renewPassword = pwd;
+      document.getElementById("renew-step-1").style.display = "none";
+      document.getElementById("renew-step-2").style.display = "block";
+      document.getElementById("renew-msg").innerText = "";
+    } else {
+      msg.innerText = json.error || "Verification failed";
+      msg.style.color = "red";
+    }
+  } catch (e) {
+    msg.innerText = "Error: " + e;
+    msg.style.color = "red";
+  }
+}
+
+async function renewSetDate() {
+  const dateVal = document.getElementById("renew-next-date").value;
+  const msg = document.getElementById("renew-msg");
+
+  if (!dateVal) {
+    msg.innerText = "Please pick a date";
+    msg.style.color = "red";
+    return;
+  }
+
+  msg.innerText = "Updating...";
+  msg.style.color = "white";
+
+  try {
+    const res = await fetch("/api/set_license_custom", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: renewPassword, date: dateVal })
     });
     const json = await res.json();
 
@@ -370,6 +418,7 @@ async function renewLicense() {
     }
   } catch (e) {
     msg.innerText = "Error: " + e;
+    msg.style.color = "red";
   }
 }
 
@@ -470,7 +519,8 @@ window.saveSlot = saveSlot;
 window.markDirty = markDirty;
 window.stopSound = stopSound;
 window.uploadSound = uploadSound;
-window.renewLicense = renewLicense;
+window.renewVerify = renewVerify;
+window.renewSetDate = renewSetDate;
 window.openLicenseModal = openLicenseModal;
 window.closeModals = closeModals;
 window.verifyAndNext = verifyAndNext;
