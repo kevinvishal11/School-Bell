@@ -1,47 +1,50 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>LRAM Clock • Local</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <link rel="stylesheet" href="/static/style.css" />
-  </head>
-  <body>
-    <div class="container">
-      <header>
-        <h1>LRAM Clock — Local</h1>
-        <div class="toprow">
-          <div>Current time: <span id="now">--:--:--</span></div>
-          <div class="top-actions">
-            <button onclick="refreshActive()">Refresh upcoming</button>
-            <button onclick="stopSound()" class="danger">Stop Sound</button>
-          </div>
+
+<head>
+  <meta charset="utf-8" />
+  <title>School Bell</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>School Bell</h1>
+      <div class="toprow">
+        <div>Current time: <span id="now">--:--:--</span></div>
+        <div class="top-actions">
+          <!-- <button onclick="refreshActive()">Refresh upcoming</button> -->
+          <button onclick="stopSound()" class="danger">Stop Sound</button>
         </div>
-      </header>
+      </div>
+    </header>
 
-      <section class="sections-wrap">
-        <h3>
-          Global Section Enables (toggle on to allow alarms in that section)
-        </h3>
-        <div id="sections" class="sections-grid"></div>
-      </section>
+    <section class="sections-wrap">
+      <h3>
+        Global Section Enables (toggle on to allow alarms in that section)
+      </h3>
+      <div id="sections" class="sections-grid"></div>
+    </section>
 
-      <section id="slots-area" class="slots-area"></section>
+    <section id="slots-area" class="slots-area"></section>
 
-      <section class="upload">
-        <h4>Upload Sound</h4>
-        <input type="file" id="soundfile" />
-        <input type="text" id="soundname" placeholder="Optional display name" />
-        <button onclick="uploadSound()">Upload</button>
-        <div id="upload-status" class="small"></div>
-      </section>
+    <section class="upload">
+      <h4>Upload Sound</h4>
+      <input type="file" id="soundfile" />
+      <input type="text" id="soundname" placeholder="Optional display name" />
+      <button onclick="uploadSound()">Upload</button>
+      <div id="upload-status" class="small"></div>
+    </section>
 
-      <section id="active-list" class="active-list">
-        <h4>Upcoming enabled slots</h4>
-        <div id="upcoming"></div>
-      </section>
-    </div>
+    <section id="active-list" class="active-list">
+      <h4>Upcoming enabled slots</h4>
+      <div id="upcoming"></div>
+    </section>
+  </div>
 
-    <script src="/static/app.js"></script>
-  </body>
+  <script src="/static/app.js"></script>
+</body>
+
 </html>

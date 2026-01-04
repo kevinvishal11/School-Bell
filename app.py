@@ -206,7 +206,7 @@ def api_active_alarms():
             "next_at": next_dt.strftime("%Y-%m-%d %H:%M")
         })
     conn.close()
-    print("Active alrams", result);
+    # print("Active alrams", result);
     return jsonify(result)
 
 def scheduler_loop():
@@ -259,7 +259,14 @@ def scheduler_loop():
         time.sleep(1)
 
 if __name__ == "__main__":
-    # Start scheduler thread
-    t = threading.Thread(target=scheduler_loop, daemon=True)
-    t.start()
-    app.run(host="0.0.0.0", port=8080, debug=True)
+    # In debug mode, Flask's reloader spawns a child process.
+    # We want the scheduler to run only in the process that handles requests (the child).
+    # If debug is False, there is only one process, so we run the scheduler there.
+    debug_mode = True
+
+    if not debug_mode or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        # Start scheduler thread
+        t = threading.Thread(target=scheduler_loop, daemon=True)
+        t.start()
+
+    app.run(host="0.0.0.0", port=8080, debug=debug_mode)
