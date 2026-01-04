@@ -79,5 +79,11 @@ if __name__ == "__main__":
             print("\nCould not create crash_log.txt file.")
             
         print(f"\nPossible fix: Close any other apps using port 5050.")
-        input("\nPress ENTER to close this window...")
+        
+        # Only wait for input if we have a console
+        if sys.stdin and sys.stdin.isatty():
+            input("\nPress ENTER to close this window...")
+        else:
+            # For noconsole apps, wait a bit so use can see log if capture
+            time.sleep(10)
         sys.exit(1)
