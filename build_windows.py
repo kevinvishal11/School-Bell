@@ -31,7 +31,8 @@ cmd = [
     "--onefile",
     CONSOLE_FLAG,
     "--name", APP_NAME,
-    "--hidden-import", "webview",
+    "--collect-all", "webview",
+    "--hidden-import", "clr",
 ]
 
 if icon_path and os.path.exists(icon_path):
