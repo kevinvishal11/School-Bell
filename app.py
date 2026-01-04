@@ -63,29 +63,77 @@ def get_conn():
     conn.row_factory = sqlite3.Row
     return conn
 
-# License System Helpers
-def init_license_db():
+# License System and DB Initialization
+def init_db():
     conn = get_conn()
     cur = conn.cursor()
-    # Create system_settings table if not exists
+    
+    # 1. Tables
+    cur.execute("""CREATE TABLE IF NOT EXISTS sections (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT,
+                    enabled INTEGER DEFAULT 1
+                  )""")
+                  
+    cur.execute("""CREATE TABLE IF NOT EXISTS slots (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    section_id INTEGER,
+                    slot_no INTEGER,
+                    time TEXT DEFAULT '',
+                    enabled INTEGER DEFAULT 0,
+                    sound_id INTEGER,
+                    FOREIGN KEY(section_id) REFERENCES sections(id),
+                    FOREIGN KEY(sound_id) REFERENCES sounds(id)
+                  )""")
+                  
+    cur.execute("""CREATE TABLE IF NOT EXISTS sounds (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT,
+                    filename TEXT UNIQUE
+                  )""")
+                  
     cur.execute("""CREATE TABLE IF NOT EXISTS system_settings (
                     key TEXT PRIMARY KEY,
                     value TEXT
                   )""")
-    # Check if license_expiry exists
+    
+    # 2. Seed Sections (14)
+    cur.execute("SELECT COUNT(*) FROM sections")
+    if cur.fetchone()[0] == 0:
+        print("Seeding default sections...")
+        for i in range(1, 15):
+            cur.execute("INSERT INTO sections (name, enabled) VALUES (?, 1)", (f"Section {i}",))
+        conn.commit()
+    
+    # 3. Seed Slots (48 per section)
+    cur.execute("SELECT COUNT(*) FROM slots")
+    if cur.fetchone()[0] == 0:
+        print("Seeding default slots...")
+        cur.execute("SELECT id FROM sections")
+        section_ids = [r[0] for r in cur.fetchall()]
+        for sid in section_ids:
+            for s_no in range(1, 49):
+                cur.execute("""INSERT INTO slots (section_id, slot_no, time, enabled) 
+                               VALUES (?, ?, '', 0)""", (sid, s_no))
+        conn.commit()
+
+    # 4. License Expiry & Admin Password
     cur.execute("SELECT value FROM system_settings WHERE key='license_expiry'")
     if not cur.fetchone():
-        # Default expiry: 1 year from now
         expiry = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
         cur.execute("INSERT INTO system_settings (key, value) VALUES ('license_expiry', ?)", (expiry,))
     
-    # Check if admin_password exists
     cur.execute("SELECT value FROM system_settings WHERE key='admin_password'")
     if not cur.fetchone():
         cur.execute("INSERT INTO system_settings (key, value) VALUES ('admin_password', 'admin')")
     
     conn.commit()
     conn.close()
+    print("Database initialization complete.")
+
+def init_license_db():
+    # Deprecated: use init_db() instead. Keeping for backward compatibility if needed.
+    init_db()
 
 def check_license():
     conn = get_conn()
@@ -428,7 +476,7 @@ if __name__ == "__main__":
     debug_mode = True
 
     if not debug_mode or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-        init_license_db()
+        init_db()
         # Start scheduler thread
         t = threading.Thread(target=scheduler_loop, daemon=True)
         t.start()

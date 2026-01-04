@@ -13,14 +13,14 @@ if __name__ == "__main__":
     try:
         # Import app logic
         print("Loading application modules...")
-        from app import app, init_license_db, scheduler_loop, get_writable_dir
+        from app import app, init_db, scheduler_loop, get_writable_dir
         
         WDIR = get_writable_dir()
         print(f"Data folder: {WDIR}")
         
         # 1. Initialize DB
         print(f"Opening database...")
-        init_license_db()
+        init_db()
 
         # 2. Start Scheduler in background
         print("Starting scheduler...")
