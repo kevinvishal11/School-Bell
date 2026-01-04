@@ -1,0 +1,13 @@
+[Unit]
+Description=LRAM Clock Flask App
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/lram-clock
+ExecStart=/usr/bin/python3 /home/pi/lram-clock/app.py
+Restart=always
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
