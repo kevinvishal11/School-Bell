@@ -17,6 +17,7 @@ cmd = [
     "--onefile",
     CONSOLE_FLAG,
     "--name", APP_NAME,
+    "--icon", "icon.png",
     "--add-data", f"templates{os.pathsep}templates",
     "--add-data", f"static{os.pathsep}static",
     "--add-data", f"sounds{os.pathsep}sounds",
