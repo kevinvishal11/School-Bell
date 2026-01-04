@@ -3,15 +3,25 @@ import sys
 import webbrowser
 import threading
 import time
-from app import app, init_license_db, scheduler_loop
+
+# Note: We move heavy imports inside the try block to catch crashes during library loading
 
 def open_browser():
     """Wait for the server to start and then open the browser."""
-    time.sleep(2)
+    time.sleep(3)
+    print("Launching browser: http://127.0.0.1:8080")
     webbrowser.open("http://127.0.0.1:8080")
 
 if __name__ == "__main__":
+    print("-" * 50)
+    print("SCHOOL BELL SYSTEM STARTING...")
+    print("-" * 50)
+    
     try:
+        # Import app logic inside try block to catch import-time errors (like pygame init)
+        print("Loading application modules...")
+        from app import app, init_license_db, scheduler_loop
+        
         # 1. Initialize DB
         print("Initializing database...")
         init_license_db()
@@ -29,10 +39,10 @@ if __name__ == "__main__":
         # 4. Run Flask with Waitress (Production Server)
         from waitress import serve
         print("\n" + "="*50)
-        print("  SCHOOL BELL SYSTEM IS RUNNING")
+        print("  SYSTEM IS ONLINE")
         print("  Access at: http://127.0.0.1:8080")
         print("="*50)
-        print("\nKeep this window open while using the application.")
+        print("\nDO NOT CLOSE THIS WINDOW. Minimize it instead.")
         
         serve(app, host="127.0.0.1", port=8080)
     except Exception as e:
@@ -43,9 +53,13 @@ if __name__ == "__main__":
         print("!"*50)
         
         # Log to file
-        with open("crash_log.txt", "w") as f:
-            f.write(error_msg)
-        
-        print("\nAn error occurred. A 'crash_log.txt' file has been created.")
+        try:
+            with open("crash_log.txt", "w") as f:
+                f.write(error_msg)
+            print("\nAn error occurred. A 'crash_log.txt' file has been created.")
+        except:
+            print("\nCould not create crash_log.txt file.")
+            
+        print("\nPossible fix: Close any other apps using port 8080.")
         input("\nPress ENTER to close this window...")
         sys.exit(1)

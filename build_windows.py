@@ -5,6 +5,20 @@ import sys
 # Name of the executable
 APP_NAME = "SchoolBellApp"
 
+# Convert PNG to ICO if needed
+if os.path.exists("icon.png"):
+    try:
+        from PIL import Image
+        img = Image.open("icon.png")
+        icon_path = "icon.ico"
+        img.save(icon_path, format='ICO', sizes=[(256, 256), (128, 128), (64, 64), (32, 32), (16, 16)])
+        print("Successfully created icon.ico")
+    except Exception as e:
+        print(f"Warning: Could not create icon.ico: {e}")
+        icon_path = "icon.png" # Fallback
+else:
+    icon_path = None
+
 # Command to run PyInstaller
 # --onefile: Bundle everything into a single EXE
 # --add-data: Include templates, static, and sounds
@@ -17,12 +31,17 @@ cmd = [
     "--onefile",
     CONSOLE_FLAG,
     "--name", APP_NAME,
-    "--icon", "icon.png",
+]
+
+if icon_path and os.path.exists(icon_path):
+    cmd.extend(["--icon", icon_path])
+
+cmd.extend([
     "--add-data", f"templates{os.pathsep}templates",
     "--add-data", f"static{os.pathsep}static",
     "--add-data", f"sounds{os.pathsep}sounds",
     "main_app.py"
-]
+])
 
 print(f"Running command: {' '.join(cmd)}")
 
