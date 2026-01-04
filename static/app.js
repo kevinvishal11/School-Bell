@@ -75,9 +75,20 @@ async function selectSection(id, elem) {
   await loadAndRenderSlots(id);
 }
 
+function formatTime12(time24) {
+  if (!time24) return "";
+  const [h, m] = time24.split(":");
+  let hours = parseInt(h);
+  const minutes = m;
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12; // the hour '0' should be '12'
+  return `${hours}:${minutes} ${ampm}`;
+}
+
 function timeNow() {
   const d = new Date();
-  return d.toLocaleTimeString();
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
 }
 
 function markDirty(slotId) {
@@ -274,7 +285,7 @@ async function refreshActive() {
     const s = it.slot;
     const el = document.createElement("div");
     el.style.padding = "6px 0";
-    el.innerHTML = `<strong>${s.section_name} — slot ${s.slot_no}</strong> at ${s.time} (in ${it.minutes_from_now} min) — next: ${it.next_at}`;
+    el.innerHTML = `<strong>${s.section_name} — slot ${s.slot_no}</strong> at ${formatTime12(s.time)} (in ${it.minutes_from_now} min) — next: ${it.next_at}`;
     target.appendChild(el);
   });
 }
@@ -314,7 +325,7 @@ async function stopSound() {
 
 function startClock() {
   setInterval(() => {
-    $("now").innerText = new Date().toLocaleTimeString();
+    $("now").innerText = timeNow();
   }, 1000);
 }
 

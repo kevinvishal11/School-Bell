@@ -117,7 +117,16 @@ def init_db():
                                VALUES (?, ?, '', 0)""", (sid, s_no))
         conn.commit()
 
-    # 4. License Expiry & Admin Password
+    # 4. Auto-populate sounds from disk
+    print("Checking for sound files on disk...")
+    if os.path.exists(SOUNDS_DIR):
+        for f in os.listdir(SOUNDS_DIR):
+            if f.lower().endswith(('.wav', '.mp3', '.ogg')):
+                name = f.replace('_', ' ').replace('.wav', '').replace('.mp3', '').replace('.ogg', '').title()
+                cur.execute("INSERT OR IGNORE INTO sounds(name, filename) VALUES(?,?)", (name, f))
+        conn.commit()
+
+    # 5. License Expiry & Admin Password
     cur.execute("SELECT value FROM system_settings WHERE key='license_expiry'")
     if not cur.fetchone():
         expiry = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
