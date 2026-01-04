@@ -5,14 +5,28 @@ import pygame
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from datetime import datetime, timedelta
 import threading
+import sys
 import time
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DB_PATH = os.path.join(BASE_DIR, "lram.db")
-SOUNDS_DIR = os.path.join(BASE_DIR, "sounds")
+# For DB, we want it to persist next to the EXE, not in temp folder
+DB_PATH = os.path.join(os.path.abspath("."), "lram.db")
+SOUNDS_DIR = resource_path("sounds")
 os.makedirs(SOUNDS_DIR, exist_ok=True)
 
-app = Flask(__name__, static_folder="static", template_folder="templates")
+# Update Flask to use resource_path for templates and static
+app = Flask(__name__, 
+            static_folder=resource_path("static"), 
+            template_folder=resource_path("templates"))
 
 # Initialize pygame mixer
 try:
