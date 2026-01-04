@@ -22,8 +22,8 @@ else:
 # Command to run PyInstaller
 # --onefile: Bundle everything into a single EXE
 # --add-data: Include templates, static, and sounds
-# --noconsole: Hide the console window (change to "" to show console)
-CONSOLE_FLAG = "--console" # Use --noconsole for production if you don't want logs
+# --noconsole: Hide the console window
+CONSOLE_FLAG = "--noconsole" 
 
 cmd = [
     "pyinstaller",

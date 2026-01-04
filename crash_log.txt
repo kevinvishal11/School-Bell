@@ -1,0 +1,7 @@
+CRITICAL ERROR AT STARTUP:
+No module named 'webview'
+
+Traceback (most recent call last):
+  File "/Users/kevinvishal/Documents/teatalk-workspace/Raspberrypi/School-Bell/main_app.py", line 43, in <module>
+    import webview
+ModuleNotFoundError: No module named 'webview'

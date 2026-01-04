@@ -1,24 +1,17 @@
 import os
 import sys
-import webbrowser
 import threading
 import time
 
 # Note: We move heavy imports inside the try block to catch crashes during library loading
 
-def open_browser():
-    """Wait for the server to start and then open the browser."""
-    time.sleep(3)
-    print("Launching browser: http://127.0.0.1:5050")
-    webbrowser.open("http://127.0.0.1:5050")
-
 if __name__ == "__main__":
     print("-" * 50)
-    print("SCHOOL BELL SYSTEM STARTING...")
+    print("SCHOOL BELL DESKTOP SYSTEM STARTING...")
     print("-" * 50)
     
     try:
-        # Import app logic inside try block to catch import-time errors
+        # Import app logic
         print("Loading application modules...")
         from app import app, init_license_db, scheduler_loop, get_writable_dir
         
@@ -34,21 +27,40 @@ if __name__ == "__main__":
         t_sch = threading.Thread(target=scheduler_loop, daemon=True)
         t_sch.start()
 
-        # 3. Start Browser launch thread
-        print("Preparing browser launch...")
-        t_br = threading.Thread(target=open_browser, daemon=True)
-        t_br.start()
-
-        # 4. Run Flask with Waitress (Production Server)
+        # 3. Start Flask server in a thread
         from waitress import serve
         port = 5050
-        print("\n" + "="*50)
-        print("  SYSTEM IS ONLINE")
-        print(f"  Access at: http://127.0.0.1:{port}")
-        print("="*50)
-        print("\nDO NOT CLOSE THIS WINDOW. Minimize it instead.")
+        flask_thread = threading.Thread(
+            target=serve, 
+            args=(app,), 
+            kwargs={'host': '127.0.0.1', 'port': port}, 
+            daemon=True
+        )
+        flask_thread.start()
+        print(f"Backend Ready at http://127.0.0.1:{port}")
+
+        # 4. Start Native GUI Window
+        import webview
         
-        serve(app, host="127.0.0.1", port=port)
+        icon_path = os.path.join(os.path.abspath("."), "icon.ico")
+        if not os.path.exists(icon_path):
+             icon_path = os.path.join(os.path.abspath("."), "icon.png")
+
+        print("Launching Desktop Window...")
+        window = webview.create_window(
+            'School Bell Control System', 
+            f'http://127.0.0.1:{port}',
+            width=1000,
+            height=700,
+            min_size=(800, 600)
+        )
+        
+        # Start the GUI
+        webview.start()
+        # Execution stops here until window is closed
+        print("Application closed by user.")
+        sys.exit(0)
+
     except Exception as e:
         import traceback
         error_msg = f"CRITICAL ERROR AT STARTUP:\n{str(e)}\n\n{traceback.format_exc()}"
