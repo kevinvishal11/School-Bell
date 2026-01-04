@@ -27,6 +27,55 @@ def get_conn():
     conn.row_factory = sqlite3.Row
     return conn
 
+# License System Helpers
+def init_license_db():
+    conn = get_conn()
+    cur = conn.cursor()
+    # Create system_settings table if not exists
+    cur.execute("""CREATE TABLE IF NOT EXISTS system_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT
+                  )""")
+    # Check if license_expiry exists
+    cur.execute("SELECT value FROM system_settings WHERE key='license_expiry'")
+    if not cur.fetchone():
+        # Default expiry: 1 year from now
+        expiry = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
+        cur.execute("INSERT INTO system_settings (key, value) VALUES ('license_expiry', ?)", (expiry,))
+    
+    # Check if admin_password exists
+    cur.execute("SELECT value FROM system_settings WHERE key='admin_password'")
+    if not cur.fetchone():
+        cur.execute("INSERT INTO system_settings (key, value) VALUES ('admin_password', 'admin')")
+    
+    conn.commit()
+    conn.close()
+
+def check_license():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT value FROM system_settings WHERE key='license_expiry'")
+    row = cur.fetchone()
+    conn.close()
+    
+    if not row:
+        return {"status": "error", "days_left": 0}
+        
+    expiry_str = row["value"]
+    try:
+        expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d")
+        now = datetime.now()
+        days_left = (expiry_date - now).days
+        
+        if days_left < 0:
+            return {"status": "expired", "days_left": days_left}
+        elif days_left <= 15:
+            return {"status": "warning", "days_left": days_left}
+        else:
+            return {"status": "active", "days_left": days_left}
+    except:
+        return {"status": "error", "days_left": 0}
+
 # ---------- Routes ----------
 @app.route("/")
 def index():
@@ -207,7 +256,77 @@ def api_active_alarms():
         })
     conn.close()
     # print("Active alrams", result);
+    # print("Active alrams", result);
     return jsonify(result)
+
+@app.route("/api/license_status")
+def api_license_status():
+    status = check_license()
+    return jsonify(status)
+
+@app.route("/api/renew_license", methods=["POST"])
+def api_renew_license():
+    data = request.json
+    password = data.get("password")
+    
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT value FROM system_settings WHERE key='admin_password'")
+    row = cur.fetchone()
+    
+    if not row or row["value"] != password:
+        conn.close()
+        return jsonify({"success": False, "error": "Invalid password"}), 401
+        
+    # renew for 1 year
+    new_expiry = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
+    cur.execute("UPDATE system_settings SET value=? WHERE key='license_expiry'", (new_expiry,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "new_expiry": new_expiry})
+
+@app.route("/api/set_license_custom", methods=["POST"])
+def api_set_license_custom():
+    data = request.json
+    password = data.get("password")
+    custom_date = data.get("date") # YYYY-MM-DD
+    
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT value FROM system_settings WHERE key='admin_password'")
+    row = cur.fetchone()
+    
+    if not row or row["value"] != password:
+        conn.close()
+        return jsonify({"success": False, "error": "Invalid password"}), 401
+    
+    # Validate date format roughly
+    try:
+        datetime.strptime(custom_date, "%Y-%m-%d")
+    except:
+        conn.close()
+        return jsonify({"success": False, "error": "Invalid date format"}), 400
+
+    cur.execute("INSERT OR REPLACE INTO system_settings (key, value) VALUES ('license_expiry', ?)", (custom_date,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "new_expiry": custom_date})
+
+@app.route("/api/verify_admin", methods=["POST"])
+def api_verify_admin():
+    data = request.json
+    password = data.get("password")
+    
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT value FROM system_settings WHERE key='admin_password'")
+    row = cur.fetchone()
+    conn.close()
+    
+    if not row or row["value"] != password:
+        return jsonify({"success": False, "error": "Invalid password"}), 401
+        
+    return jsonify({"success": True})
 
 def scheduler_loop():
     print("Scheduler thread started")
@@ -217,6 +336,14 @@ def scheduler_loop():
             now = datetime.now()
             current_hm = now.strftime("%H:%M")
             if current_hm != last_minute:
+                # Check license first
+                lic = check_license()
+                if lic["status"] == "expired":
+                    print("License expired. Skipping scheduler.")
+                    last_minute = current_hm
+                    time.sleep(1)
+                    continue
+
                 # New minute, check for alarms
                 conn = get_conn()
                 cur = conn.cursor()
@@ -265,6 +392,7 @@ if __name__ == "__main__":
     debug_mode = True
 
     if not debug_mode or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        init_license_db()
         # Start scheduler thread
         t = threading.Thread(target=scheduler_loop, daemon=True)
         t.start()

@@ -9,6 +9,21 @@
 </head>
 
 <body>
+  <div id="license-banner" class="license-banner" style="display:none;">
+    ⚠️ Your license expires in <span id="days-left"></span> days.
+  </div>
+
+  <div id="license-overlay" class="license-overlay" style="display:none;">
+    <div class="overlay-content">
+      <h1>School Bell System Locked</h1>
+      <p>Your license has expired.</p>
+      <p>Please contact support or enter your admin password to renew.</p>
+      <input type="password" id="admin-pass" placeholder="Admin Password">
+      <button onclick="renewLicense()">Renew License</button>
+      <div id="renew-msg"></div>
+    </div>
+  </div>
+
   <div class="container">
     <header>
       <h1>School Bell</h1>
@@ -17,9 +32,32 @@
         <div class="top-actions">
           <!-- <button onclick="refreshActive()">Refresh upcoming</button> -->
           <button onclick="stopSound()" class="danger">Stop Sound</button>
+          <button onclick="openLicenseModal()">Set License Date</button>
         </div>
       </div>
     </header>
+
+    <div id="auth-modal" class="license-overlay" style="display:none;">
+      <div class="overlay-content">
+        <h1>Admin Authentication</h1>
+        <p>Please enter admin password to continue.</p>
+        <input type="password" id="auth-pass" placeholder="Admin Password">
+        <button onclick="verifyAndNext()">Next</button>
+        <button onclick="closeModals()" style="background:#555; margin-top:10px;">Cancel</button>
+        <div id="auth-msg"></div>
+      </div>
+    </div>
+
+    <div id="expiry-modal" class="license-overlay" style="display:none;">
+      <div class="overlay-content">
+        <h1>Set Expiry Date</h1>
+        <p>Select the new license expiration date.</p>
+        <input type="date" id="new-expiry-date">
+        <button onclick="updateLicenseDate()">Update</button>
+        <button onclick="closeModals()" style="background:#555; margin-top:10px;">Cancel</button>
+        <div id="expiry-msg"></div>
+      </div>
+    </div>
 
     <section class="sections-wrap">
       <h3>

@@ -318,12 +318,150 @@ function startClock() {
   }, 1000);
 }
 
+// License related
+async function checkLicense() {
+  try {
+    const res = await fetch("/api/license_status");
+    const json = await res.json();
+
+    // Banner logic
+    const banner = document.getElementById("license-banner");
+    if (json.status === "warning") {
+      banner.style.display = "block";
+      document.getElementById("days-left").innerText = json.days_left;
+    } else {
+      banner.style.display = "none";
+    }
+
+    // Overlay logic
+    const overlay = document.getElementById("license-overlay");
+    if (json.status === "expired") {
+      overlay.style.display = "flex";
+      // Auto-stop any playing sound
+      stopSound();
+    } else {
+      overlay.style.display = "none";
+    }
+  } catch (e) {
+    console.warn("License check failed", e);
+  }
+}
+
+async function renewLicense() {
+  const pwd = document.getElementById("admin-pass").value;
+  const msg = document.getElementById("renew-msg");
+  msg.innerText = "Verifying...";
+
+  try {
+    const res = await fetch("/api/renew_license", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pwd })
+    });
+    const json = await res.json();
+
+    if (json.success) {
+      msg.innerText = "License Renewed! reloading...";
+      msg.style.color = "lightgreen";
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      msg.innerText = json.error || "Renewal failed";
+      msg.style.color = "red";
+    }
+  } catch (e) {
+    msg.innerText = "Error: " + e;
+  }
+}
+
+// Custom Date Modal (Two-Step)
+let verifiedPassword = null;
+
+function openLicenseModal() {
+  document.getElementById("auth-modal").style.display = "flex";
+  document.getElementById("auth-pass").value = "";
+  document.getElementById("auth-msg").innerText = "";
+}
+
+function closeModals() {
+  document.getElementById("auth-modal").style.display = "none";
+  document.getElementById("expiry-modal").style.display = "none";
+  verifiedPassword = null;
+}
+
+async function verifyAndNext() {
+  const pwd = document.getElementById("auth-pass").value;
+  const msg = document.getElementById("auth-msg");
+
+  msg.innerText = "Verifying...";
+  msg.style.color = "white";
+
+  try {
+    const res = await fetch("/api/verify_admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pwd })
+    });
+    const json = await res.json();
+
+    if (json.success) {
+      verifiedPassword = pwd;
+      document.getElementById("auth-modal").style.display = "none";
+      document.getElementById("expiry-modal").style.display = "flex";
+      document.getElementById("new-expiry-date").value = "";
+      document.getElementById("expiry-msg").innerText = "";
+    } else {
+      msg.innerText = json.error || "Verification failed";
+      msg.style.color = "red";
+    }
+  } catch (e) {
+    msg.innerText = "Error: " + e;
+    msg.style.color = "red";
+  }
+}
+
+async function updateLicenseDate() {
+  const dateVal = document.getElementById("new-expiry-date").value;
+  const msg = document.getElementById("expiry-msg");
+
+  if (!dateVal) {
+    msg.innerText = "Please pick a date";
+    msg.style.color = "red";
+    return;
+  }
+
+  msg.innerText = "Updating...";
+  msg.style.color = "white";
+
+  try {
+    const res = await fetch("/api/set_license_custom", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: verifiedPassword, date: dateVal })
+    });
+    const json = await res.json();
+
+    if (json.success) {
+      msg.innerText = "Date Updated! Reloading...";
+      msg.style.color = "lightgreen";
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      msg.innerText = json.error || "Update failed";
+      msg.style.color = "red";
+    }
+  } catch (e) {
+    msg.innerText = "Error: " + e;
+    msg.style.color = "red";
+  }
+}
+
 async function start() {
   startClock();
   await fetchSections();
   await loadSounds();
+  await checkLicense(); // Check immediately
   await refreshActive();
   setInterval(refreshActive, 30000);
+  setInterval(checkLicense, 60000); // Check every minute
 }
 
 window.onload = start;
@@ -332,3 +470,8 @@ window.saveSlot = saveSlot;
 window.markDirty = markDirty;
 window.stopSound = stopSound;
 window.uploadSound = uploadSound;
+window.renewLicense = renewLicense;
+window.openLicenseModal = openLicenseModal;
+window.closeModals = closeModals;
+window.verifyAndNext = verifyAndNext;
+window.updateLicenseDate = updateLicenseDate;
