@@ -18,10 +18,26 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 def get_writable_dir():
-    """ Get the directory where the EXE is located (for DB and logs) """
+    """ Get a writable directory for DB and logs. 
+    Tries the EXE folder first (portable), falls back to User Home if blocked. """
+    # 1. Try primary location (EXE folder or Script folder)
     if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)
-    return os.path.abspath(os.path.dirname(__file__))
+        primary = os.path.dirname(sys.executable)
+    else:
+        primary = os.path.abspath(os.path.dirname(__file__))
+    
+    # 2. Test if primary is writable
+    test_file = os.path.join(primary, ".write_test")
+    try:
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+        return primary
+    except Exception:
+        # 3. Fallback to User Home / SchoolBellData
+        fallback = os.path.join(os.path.expanduser("~"), "SchoolBellData")
+        os.makedirs(fallback, exist_ok=True)
+        return fallback
 
 # Data that persists (DB, Uploaded Sounds)
 WRITABLE_DIR = get_writable_dir()

@@ -23,9 +23,10 @@ if __name__ == "__main__":
         from app import app, init_license_db, scheduler_loop, get_writable_dir
         
         WDIR = get_writable_dir()
+        print(f"Data folder: {WDIR}")
         
         # 1. Initialize DB
-        print(f"Initializing database at: {WDIR}...")
+        print(f"Opening database...")
         init_license_db()
 
         # 2. Start Scheduler in background
