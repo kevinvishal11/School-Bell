@@ -51,6 +51,24 @@ def get_conn():
 
 # License System and DB Initialization
 def init_db():
+    # --- Migration Step ---
+    safe_db = os.path.join(get_writable_dir(), "lram.db")
+    if not os.path.exists(safe_db):
+        # Check if an old DB exists in the app folder
+        if getattr(sys, 'frozen', False):
+            app_dir = os.path.dirname(sys.executable)
+        else:
+            app_dir = os.path.abspath(os.path.dirname(__file__))
+        
+        old_db = os.path.join(app_dir, "lram.db")
+        if os.path.exists(old_db):
+            print(f"Migrating database from {old_db} to {safe_db}")
+            try:
+                import shutil
+                shutil.copy2(old_db, safe_db)
+            except Exception as e:
+                print(f"Migration failed: {e}")
+
     conn = get_conn()
     cur = conn.cursor()
     
@@ -82,18 +100,24 @@ def init_db():
                     key TEXT PRIMARY KEY,
                     value TEXT
                   )""")
+    conn.commit()
     
     # 2. Seed Sections (14)
     cur.execute("SELECT COUNT(*) FROM sections")
-    if cur.fetchone()[0] == 0:
+    section_count = cur.fetchone()[0]
+    print(f"Database: Found {section_count} sections.")
+    if section_count == 0:
         print("Seeding default sections...")
         for i in range(1, 15):
             cur.execute("INSERT INTO sections (name, enabled) VALUES (?, 1)", (f"Section {i}",))
         conn.commit()
+        print("Seeding default sections complete.")
     
     # 3. Seed Slots (48 per section)
     cur.execute("SELECT COUNT(*) FROM slots")
-    if cur.fetchone()[0] == 0:
+    slot_count = cur.fetchone()[0]
+    print(f"Database: Found {slot_count} slots.")
+    if slot_count == 0:
         print("Seeding default slots...")
         cur.execute("SELECT id FROM sections")
         section_ids = [r[0] for r in cur.fetchall()]
@@ -102,6 +126,7 @@ def init_db():
                 cur.execute("""INSERT INTO slots (section_id, slot_no, time, enabled) 
                                VALUES (?, ?, '', 0)""", (sid, s_no))
         conn.commit()
+        print("Seeding default slots complete.")
 
     # 4. Auto-populate sounds from disk
     print("Checking for sound files on disk...")

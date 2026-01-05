@@ -12,44 +12,53 @@ function $(id) {
 }
 
 async function fetchSections() {
-  const r = await fetch("/api/sections");
-  const secs = await r.json();
-  sectionsCache = secs;
-  const container = $("sections");
-  container.innerHTML = "";
-  secs.forEach((s) => {
-    const card = document.createElement("div");
-    card.className = "section-card";
-    const title = document.createElement("div");
-    title.className = "title";
-    title.innerText = s.name;
-    const right = document.createElement("div");
+  try {
+    const r = await fetch("/api/sections");
+    if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
+    const secs = await r.json();
+    sectionsCache = secs;
+    const container = $("sections");
+    container.innerHTML = "";
+    if (secs.length === 0) {
+      container.innerHTML = "<div style='color:red; padding:20px;'>No sections found in database. Please check logs.</div>";
+    }
+    secs.forEach((s) => {
+      const card = document.createElement("div");
+      card.className = "section-card";
+      const title = document.createElement("div");
+      title.className = "title";
+      title.innerText = s.name;
+      const right = document.createElement("div");
 
-    // toggle
-    const label = document.createElement("label");
-    label.className = "switch";
-    const chk = document.createElement("input");
-    chk.type = "checkbox";
-    chk.checked = s.enabled === 1 || s.enabled === true;
-    chk.onchange = () => toggleSection(s.id, chk.checked);
-    const span = document.createElement("span");
-    span.className = "slider";
-    label.appendChild(chk);
-    label.appendChild(span);
+      // toggle
+      const label = document.createElement("label");
+      label.className = "switch";
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.checked = s.enabled === 1 || s.enabled === true;
+      chk.onchange = () => toggleSection(s.id, chk.checked);
+      const span = document.createElement("span");
+      span.className = "slider";
+      label.appendChild(chk);
+      label.appendChild(span);
 
-    card.onclick = (ev) => {
-      if (ev.target.tagName.toLowerCase() === "input") return;
-      selectSection(s.id, card);
-    };
+      card.onclick = (ev) => {
+        if (ev.target.tagName.toLowerCase() === "input") return;
+        selectSection(s.id, card);
+      };
 
-    right.appendChild(label);
-    card.appendChild(title);
-    card.appendChild(right);
-    container.appendChild(card);
-  });
-  // select first section by default
-  const first = container.querySelector(".section-card");
-  if (first && currentSection === null) first.click();
+      right.appendChild(label);
+      card.appendChild(title);
+      card.appendChild(right);
+      container.appendChild(card);
+    });
+    // select first section by default
+    const first = container.querySelector(".section-card");
+    if (first && currentSection === null) first.click();
+  } catch (err) {
+    console.error("fetchSections Error:", err);
+    $("sections").innerHTML = `<div style='color:red; padding:20px;'>Error loading sections: ${err.message}</div>`;
+  }
 }
 
 async function toggleSection(sectionId, enabled) {

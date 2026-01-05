@@ -5,6 +5,30 @@ body {
   color: #222;
 }
 
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 28px;
+  background: white;
+  border-bottom: 1px solid #ddd;
+}
+
+.logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.app-title {
+  font-size: 36px;
+  font-weight: 700;
+  color: #0b3c6f;
+  /* dark blue */
+  margin: 0;
+}
+
 .container {
   max-width: 1100px;
   margin: 18px auto;
