@@ -302,16 +302,19 @@ async function uploadSound() {
   const file = fileEl.files[0];
   const fd = new FormData();
   fd.append("file", file);
-  const name = document.getElementById("soundname").value;
+  const nameEl = document.getElementById("soundname");
+  const name = nameEl ? nameEl.value : "";
   if (name) fd.append("name", name);
   const res = await fetch("/api/upload_sound", { method: "POST", body: fd });
   const json = await res.json();
   if (json.success) {
     $("upload-status").innerText = "Uploaded: " + json.filename;
+    $("upload-status").style.color = "lightgreen";
     await loadSounds();
     if (currentSection) loadAndRenderSlots(currentSection);
   } else {
-    $("upload-status").innerText = "Upload failed";
+    $("upload-status").innerText = "Upload failed: " + (json.error || "Unknown error");
+    $("upload-status").style.color = "red";
   }
 }
 

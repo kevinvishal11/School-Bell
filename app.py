@@ -255,8 +255,8 @@ def api_upload_sound():
     if 'file' not in request.files:
         return jsonify({"success": False, "error": "file missing"}), 400
     f = request.files['file']
-    filename = f.filename.lower()
-    if not (filename.endswith('.wav') or filename.endswith('.mp3')):
+    filename = f.filename
+    if not (filename.lower().endswith('.wav') or filename.lower().endswith('.mp3')):
         return jsonify({"success": False, "error": "Only .wav and .mp3 files allowed"}), 400
         
     name = request.form.get("name") or f.filename
