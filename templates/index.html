@@ -73,7 +73,7 @@
 
     <section class="sections-wrap">
       <h3>
-        Global Section Enables (toggle on to allow alarms in that section)
+        Global Alarm Section (toggle on to allow alarms in that section)
       </h3>
       <div id="sections" class="sections-grid"></div>
     </section>
@@ -81,9 +81,9 @@
     <section id="slots-area" class="slots-area"></section>
 
     <section class="upload">
-      <h4>Upload Sound</h4>
-      <input type="file" id="soundfile" accept="audio/*,.mp3,.wav,.ogg" />
-      <input type="text" id="soundname" placeholder="Optional display name" />
+      <h4>Upload Sound (.wav format)</h4>
+      <input type="file" id="soundfile" accept=".mp3,.wav" />
+      <!-- <input type="text" id="soundname" placeholder="Optional display name" /> -->
       <button onclick="uploadSound()">Upload</button>
       <div id="upload-status" class="small"></div>
     </section>

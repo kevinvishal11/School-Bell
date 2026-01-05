@@ -107,7 +107,26 @@ async function loadAndRenderSlots(sectionId) {
     } — Slots</h3>`;
   html += `<div class="slots-wrap"><table class="slots-table"><thead><tr><th>#</th><th>Time</th><th>Sound</th><th>Enabled</th><th>Actions</th></tr></thead><tbody>`;
   slots.forEach((s) => {
-    const timeVal = s.time || "";
+    const timeVal = s.time || "09:00";
+    const [h24, m] = timeVal.split(":");
+    let h12 = parseInt(h24);
+    const period = h12 >= 12 ? "PM" : "AM";
+    h12 = h12 % 12 || 12;
+    const h12Str = h12.toString();
+
+    // Hour options 1-12
+    let hourOptions = "";
+    for (let i = 1; i <= 12; i++) {
+      hourOptions += `<option value="${i}" ${i === h12 ? "selected" : ""}>${i}</option>`;
+    }
+
+    // Minute options 00-59
+    let minOptions = "";
+    for (let i = 0; i < 60; i++) {
+      const val = i.toString().padStart(2, '0');
+      minOptions += `<option value="${val}" ${val === m ? "selected" : ""}>${val}</option>`;
+    }
+
     const soundOptions = sounds
       .map(
         (sound) =>
@@ -118,8 +137,14 @@ async function loadAndRenderSlots(sectionId) {
     const filenameForAttr = s.filename ? encodeURIComponent(s.filename) : "";
     html += `<tr id="slot-row-${s.id}">
       <td style="width:58px">${s.slot_no}</td>
-      <td style="width:160px"><input type="time" id="time-${s.id
-      }" value="${timeVal}" step="60" onchange="markDirty(${s.id})"></td>
+      <td style="width:220px" class="time-picker-cell">
+        <select id="hour-${s.id}" onchange="markDirty(${s.id})">${hourOptions}</select> :
+        <select id="min-${s.id}" onchange="markDirty(${s.id})">${minOptions}</select>
+        <select id="ampm-${s.id}" onchange="markDirty(${s.id})">
+            <option value="AM" ${period === "AM" ? "selected" : ""}>AM</option>
+            <option value="PM" ${period === "PM" ? "selected" : ""}>PM</option>
+        </select>
+      </td>
       <td style="width:240px"><select id="sound-${s.id}" onchange="markDirty(${s.id
       })">${soundOptions}</select></td>
       <td style="width:80px"><input type="checkbox" id="enabled-${s.id}" ${s.enabled ? "checked" : ""
@@ -137,14 +162,20 @@ async function loadAndRenderSlots(sectionId) {
 }
 
 async function saveSlot(slotId) {
-  const timeVal = document.getElementById(`time-${slotId}`).value;
+  const h = parseInt(document.getElementById(`hour-${slotId}`).value);
+  const m = document.getElementById(`min-${slotId}`).value;
+  const period = document.getElementById(`ampm-${slotId}`).value;
+
+  let h24 = h;
+  if (period === "PM" && h < 12) h24 += 12;
+  if (period === "AM" && h === 12) h24 = 0;
+
+  const timeVal = `${h24.toString().padStart(2, '0')}:${m}`;
+
   const soundId = parseInt(document.getElementById(`sound-${slotId}`).value);
   const enabled = document.getElementById(`enabled-${slotId}`).checked;
   const sectionId = currentSection;
-  if (timeVal && !/^([01]\d|2[0-3]):([0-5]\d)$/.test(timeVal)) {
-    alert("Enter time in HH:MM 24-hour format");
-    return;
-  }
+
   const body = {
     id: slotId,
     time: timeVal,

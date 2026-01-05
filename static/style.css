@@ -121,9 +121,17 @@ button.danger {
   border-collapse: collapse;
 }
 
+.time-picker-cell select {
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  background: white;
+}
+
 .slots-table th,
 .slots-table td {
-  padding: 8px 6px;
+  padding: 12px 8px;
   border-bottom: 1px solid #eee;
   text-align: left;
   font-size: 14px;
