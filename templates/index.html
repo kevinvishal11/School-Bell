@@ -6,12 +6,78 @@
   <title>School Bell</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .school-info-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .school-info-main {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .license-expiry-text {
+      font-size: 0.9rem;
+      color: #666;
+      margin-left: 10px;
+      font-weight: normal;
+    }
+
+    .admin-edit-btn {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #333;
+      padding: 8px 15px;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .admin-edit-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .section-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .edit-section-btn {
+      cursor: pointer;
+      opacity: 0.6;
+      font-size: 0.8rem;
+    }
+
+    .edit-section-btn:hover {
+      opacity: 1;
+    }
+  </style>
 </head>
 
 <body>
   <header class="app-header">
-    <img src="{{ url_for('static', filename='school-logo.png') }}" class="logo" alt="Logo">
-    <h1 class="app-title">POORNA PRAJNA SCHOOL BELL SYSTEM</h1>
+    <div class="school-info-row">
+      <div class="school-info-main">
+        <img id="display-logo" src="{{ url_for('static', filename='school-logo.png') }}" class="logo" alt="Logo">
+        <div>
+          <h1 id="display-name" class="app-title">POORNA PRAJNA SCHOOL BELL SYSTEM</h1>
+          <span id="display-expiry" class="license-expiry-text"></span>
+        </div>
+      </div>
+    </div>
   </header>
 
   <div id="license-banner" class="license-banner" style="display:none;">
@@ -43,16 +109,54 @@
 
   <div class="container">
     <header>
-      <!-- <h1>School Bell</h1> -->
       <div class="toprow">
         <div>Current time: <span id="now">--:--:--</span></div>
         <div class="top-actions">
-          <!-- <button onclick="refreshActive()">Refresh upcoming</button> -->
-          <button onclick="stopSound()" class="danger">Stop Sound</button>
+          <button onclick="openAdminSettings()" class="admin-edit-btn">⚙️ Admin Settings</button>
           <button onclick="openLicenseModal()">Set License Date</button>
+          <button onclick="stopSound()" class="danger">Stop Sound</button>
         </div>
       </div>
     </header>
+
+    <!-- Admin Settings Modal -->
+    <div id="admin-settings-modal" class="license-overlay" style="display:none;">
+      <div class="overlay-content">
+        <h1>Admin Settings</h1>
+        <div id="admin-settings-auth">
+          <p>Please enter admin password to continue.</p>
+          <input type="password" id="admin-settings-pass" placeholder="Admin Password">
+          <button onclick="verifyAdminSettings()">Next</button>
+        </div>
+        <div id="admin-settings-form" style="display:none;">
+          <p>Update School Information</p>
+          <div style="margin-bottom:15px; text-align:left;">
+            <label>School Name:</label><br>
+            <input type="text" id="edit-school-name" style="width:100%; box-sizing:border-box; margin-top:5px;">
+          </div>
+          <div style="margin-bottom:15px; text-align:left;">
+            <label>School Logo:</label><br>
+            <input type="file" id="edit-school-logo" accept="image/*" style="margin-top:5px;">
+          </div>
+          <button onclick="saveAdminSettings()">Save Changes</button>
+        </div>
+        <button onclick="closeModals()" style="background:#555; margin-top:10px;">Cancel</button>
+        <div id="admin-settings-msg"></div>
+      </div>
+    </div>
+
+    <!-- Section Rename Modal -->
+    <div id="section-rename-modal" class="license-overlay" style="display:none;">
+      <div class="overlay-content">
+        <h1>Rename Section</h1>
+        <p>Enter new name for the section.</p>
+        <input type="text" id="new-section-name" placeholder="Section Name">
+        <input type="hidden" id="rename-section-id">
+        <button onclick="saveSectionName()">Update</button>
+        <button onclick="closeModals()" style="background:#555; margin-top:10px;">Cancel</button>
+        <div id="section-rename-msg"></div>
+      </div>
+    </div>
 
     <div id="auth-modal" class="license-overlay" style="display:none;">
       <div class="overlay-content">
@@ -86,9 +190,8 @@
     <section id="slots-area" class="slots-area"></section>
 
     <section class="upload">
-      <h4>Upload Sound (.wav format)</h4>
-      <input type="file" id="soundfile" accept=".mp3,.wav" />
-      <!-- <input type="text" id="soundname" placeholder="Optional display name" /> -->
+      <h4>Upload Sound (.mp3, .wav, .ogg, .aiff)</h4>
+      <input type="file" id="soundfile" accept=".mp3,.wav,.ogg,.aif,.aiff" />
       <button onclick="uploadSound()">Upload</button>
       <div id="upload-status" class="small"></div>
     </section>

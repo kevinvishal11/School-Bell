@@ -2,6 +2,7 @@ import os
 import sys
 import threading
 import time
+import ctypes
 
 # Note: We move heavy imports inside the try block to catch crashes during library loading
 
@@ -10,6 +11,17 @@ if __name__ == "__main__":
     print("SCHOOL BELL DESKTOP SYSTEM STARTING...")
     print("-" * 50)
     
+    # Windows background execution fix
+    if sys.platform == "win32":
+        print("Applying Windows background execution optimization...")
+        ES_CONTINUOUS = 0x80000000
+        ES_SYSTEM_REQUIRED = 0x00000001
+        ES_AWAYMODE_REQUIRED = 0x00000040
+        try:
+            ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED)
+        except Exception as e:
+            print(f"Non-critical: Could not set execution state: {e}")
+
     try:
         # Import app logic
         print("Loading application modules...")

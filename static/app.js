@@ -25,9 +25,26 @@ async function fetchSections() {
     secs.forEach((s) => {
       const card = document.createElement("div");
       card.className = "section-card";
+
+      const titleWrap = document.createElement("div");
+      titleWrap.className = "section-title-wrap";
+
       const title = document.createElement("div");
       title.className = "title";
       title.innerText = s.name;
+
+      const editBtn = document.createElement("span");
+      editBtn.className = "edit-section-btn";
+      editBtn.innerHTML = "✏️";
+      editBtn.title = "Rename Section";
+      editBtn.onclick = (ev) => {
+        ev.stopPropagation();
+        openRenameModal(s.id, s.name);
+      };
+
+      titleWrap.appendChild(title);
+      titleWrap.appendChild(editBtn);
+
       const right = document.createElement("div");
 
       // toggle
@@ -43,12 +60,12 @@ async function fetchSections() {
       label.appendChild(span);
 
       card.onclick = (ev) => {
-        if (ev.target.tagName.toLowerCase() === "input") return;
+        if (ev.target.tagName.toLowerCase() === "input" || ev.target.classList.contains("edit-section-btn")) return;
         selectSection(s.id, card);
       };
 
       right.appendChild(label);
-      card.appendChild(title);
+      card.appendChild(titleWrap);
       card.appendChild(right);
       container.appendChild(card);
     });
@@ -161,8 +178,7 @@ async function loadAndRenderSlots(sectionId) {
       <td class="table-actions">
         <button id="save-btn-${s.id}" class="save-btn" onclick="saveSlot(${s.id
       })">Save</button>
-        <button onclick="playSlot(${s.id
-      }, '${filenameForAttr}')" style="background:#28a745">Play</button>
+       
       </td>
     </tr>`;
   });
@@ -378,6 +394,11 @@ async function checkLicense() {
     const res = await fetch("/api/license_status");
     const json = await res.json();
 
+    // Expiry text
+    if (json.expiry_date) {
+      $("display-expiry").innerText = `(License expires: ${json.expiry_date})`;
+    }
+
     // Banner logic
     const banner = document.getElementById("license-banner");
     if (json.status === "warning") {
@@ -405,6 +426,143 @@ async function checkLicense() {
     }
   } catch (e) {
     console.warn("License check failed", e);
+  }
+}
+
+// School Info
+async function fetchSchoolInfo() {
+  try {
+    const r = await fetch("/api/school_info");
+    const json = await r.json();
+    if (json.school_name) $("display-name").innerText = json.school_name;
+    if (json.school_logo) $("display-logo").src = json.school_logo;
+  } catch (e) {
+    console.warn("fetchSchoolInfo failed", e);
+  }
+}
+
+// Admin Settings
+let adminSettingsPassword = null;
+
+function openAdminSettings() {
+  $("admin-settings-modal").style.display = "flex";
+  $("admin-settings-auth").style.display = "block";
+  $("admin-settings-form").style.display = "none";
+  $("admin-settings-pass").value = "";
+  $("admin-settings-msg").innerText = "";
+  adminSettingsPassword = null;
+}
+
+async function verifyAdminSettings() {
+  const pwd = $("admin-settings-pass").value;
+  const msg = $("admin-settings-msg");
+  msg.innerText = "Verifying...";
+  try {
+    const res = await fetch("/api/verify_admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pwd })
+    });
+    const json = await res.json();
+    if (json.success) {
+      adminSettingsPassword = pwd;
+      $("admin-settings-auth").style.display = "none";
+      $("admin-settings-form").style.display = "block";
+      msg.innerText = "";
+      // Pre-fill form
+      $("edit-school-name").value = $("display-name").innerText;
+    } else {
+      msg.innerText = json.error || "Verification failed";
+      msg.style.color = "red";
+    }
+  } catch (e) {
+    msg.innerText = "Error: " + e;
+    msg.style.color = "red";
+  }
+}
+
+async function saveAdminSettings() {
+  const name = $("edit-school-name").value;
+  const logoFile = $("edit-school-logo").files[0];
+  const msg = $("admin-settings-msg");
+
+  msg.innerText = "Saving...";
+  msg.style.color = "white";
+
+  try {
+    // 1. Upload logo if selected
+    if (logoFile) {
+      const fd = new FormData();
+      fd.append("file", logoFile);
+      fd.append("password", adminSettingsPassword);
+      const logoRes = await fetch("/api/upload_logo", { method: "POST", body: fd });
+      const logoJson = await logoRes.json();
+      if (!logoJson.success) throw new Error(logoJson.error || "Logo upload failed");
+    }
+
+    // 2. Update name
+    const res = await fetch("/api/update_school_info", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        password: adminSettingsPassword,
+        school_name: name
+      })
+    });
+    const json = await res.json();
+    if (json.success) {
+      msg.innerText = "Settings saved! Reloading...";
+      msg.style.color = "lightgreen";
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      msg.innerText = json.error || "Save failed";
+      msg.style.color = "red";
+    }
+  } catch (e) {
+    msg.innerText = "Error: " + e.message;
+    msg.style.color = "red";
+  }
+}
+
+// Section Renaming
+function openRenameModal(id, currentName) {
+  $("section-rename-modal").style.display = "flex";
+  $("new-section-name").value = currentName;
+  $("rename-section-id").value = id;
+  $("section-rename-msg").innerText = "";
+}
+
+async function saveSectionName() {
+  const id = $("rename-section-id").value;
+  const newName = $("new-section-name").value;
+  const msg = $("section-rename-msg");
+
+  if (!newName) {
+    msg.innerText = "Please enter a name";
+    msg.style.color = "red";
+    return;
+  }
+
+  msg.innerText = "Updating...";
+  try {
+    const res = await fetch("/api/update_section_name", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ section_id: id, name: newName })
+    });
+    const json = await res.json();
+    if (json.success) {
+      msg.innerText = "Renamed successfully!";
+      msg.style.color = "lightgreen";
+      await fetchSections();
+      setTimeout(closeModals, 1000);
+    } else {
+      msg.innerText = json.error || "Failed to rename";
+      msg.style.color = "red";
+    }
+  } catch (e) {
+    msg.innerText = "Error: " + e;
+    msg.style.color = "red";
   }
 }
 
@@ -488,6 +646,8 @@ function openLicenseModal() {
 function closeModals() {
   document.getElementById("auth-modal").style.display = "none";
   document.getElementById("expiry-modal").style.display = "none";
+  document.getElementById("admin-settings-modal").style.display = "none";
+  document.getElementById("section-rename-modal").style.display = "none";
   verifiedPassword = null;
 }
 
@@ -559,6 +719,7 @@ async function updateLicenseDate() {
 
 async function start() {
   startClock();
+  await fetchSchoolInfo();
   await fetchSections();
   await loadSounds();
   await checkLicense(); // Check immediately
@@ -579,3 +740,7 @@ window.openLicenseModal = openLicenseModal;
 window.closeModals = closeModals;
 window.verifyAndNext = verifyAndNext;
 window.updateLicenseDate = updateLicenseDate;
+window.openAdminSettings = openAdminSettings;
+window.verifyAdminSettings = verifyAdminSettings;
+window.saveAdminSettings = saveAdminSettings;
+window.saveSectionName = saveSectionName;

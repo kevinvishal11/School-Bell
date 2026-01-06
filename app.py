@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import threading
 import sys
 import time
+import shutil
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -128,12 +129,26 @@ def init_db():
         conn.commit()
         print("Seeding default slots complete.")
 
-    # 4. Auto-populate sounds from disk
+    # 4. Auto-populate sounds from disk & Seed default sounds
     print("Checking for sound files on disk...")
+    # Seed default sounds from bundled directory to Writable sounds dir if it's empty or missing files
+    bundled_sounds_dir = resource_path("sounds")
+    if os.path.exists(bundled_sounds_dir):
+        for f in os.listdir(bundled_sounds_dir):
+            if f.lower().endswith(('.wav', '.mp3', '.ogg', '.aif', '.aiff')):
+                src = os.path.join(bundled_sounds_dir, f)
+                dst = os.path.join(SOUNDS_DIR, f)
+                if not os.path.exists(dst):
+                    print(f"Seeding default sound: {f}")
+                    try:
+                        shutil.copy2(src, dst)
+                    except Exception as e:
+                        print(f"Failed to seed sound {f}: {e}")
+
     if os.path.exists(SOUNDS_DIR):
         for f in os.listdir(SOUNDS_DIR):
-            if f.lower().endswith(('.wav', '.mp3', '.ogg')):
-                name = f.replace('_', ' ').replace('.wav', '').replace('.mp3', '').replace('.ogg', '').title()
+            if f.lower().endswith(('.wav', '.mp3', '.ogg', '.aif', '.aiff')):
+                name = f.replace('_', ' ').replace('.wav', '').replace('.mp3', '').replace('.ogg', '').replace('.aiff', '').replace('.aif', '').title()
                 cur.execute("INSERT OR IGNORE INTO sounds(name, filename) VALUES(?,?)", (name, f))
         conn.commit()
 
@@ -146,6 +161,14 @@ def init_db():
     cur.execute("SELECT value FROM system_settings WHERE key='admin_password'")
     if not cur.fetchone():
         cur.execute("INSERT INTO system_settings (key, value) VALUES ('admin_password', 'admin')")
+    
+    cur.execute("SELECT value FROM system_settings WHERE key='school_name'")
+    if not cur.fetchone():
+        cur.execute("INSERT INTO system_settings (key, value) VALUES ('school_name', 'POORNA PRAJNA SCHOOL BELL SYSTEM')")
+
+    cur.execute("SELECT value FROM system_settings WHERE key='school_logo'")
+    if not cur.fetchone():
+        cur.execute("INSERT INTO system_settings (key, value) VALUES ('school_logo', 'static/school-logo.png')")
     
     conn.commit()
     conn.close()
@@ -163,7 +186,7 @@ def check_license():
     conn.close()
     
     if not row:
-        return {"status": "error", "days_left": 0}
+        return {"status": "error", "days_left": 0, "expiry_date": ""}
         
     expiry_str = row["value"]
     try:
@@ -172,13 +195,13 @@ def check_license():
         days_left = (expiry_date - now).days
         
         if days_left < 0:
-            return {"status": "expired", "days_left": days_left}
+            return {"status": "expired", "days_left": days_left, "expiry_date": expiry_str}
         elif days_left <= 15:
-            return {"status": "warning", "days_left": days_left}
+            return {"status": "warning", "days_left": days_left, "expiry_date": expiry_str}
         else:
-            return {"status": "active", "days_left": days_left}
+            return {"status": "active", "days_left": days_left, "expiry_date": expiry_str}
     except:
-        return {"status": "error", "days_left": 0}
+        return {"status": "error", "days_left": 0, "expiry_date": ""}
 
 # ---------- Routes ----------
 @app.route("/")
@@ -207,6 +230,20 @@ def api_set_section_enabled():
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("UPDATE sections SET enabled=? WHERE id=?", (enabled, section_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+@app.route("/api/update_section_name", methods=["POST"])
+def api_update_section_name():
+    data = request.json
+    section_id = data.get("section_id")
+    name = data.get("name")
+    if not name:
+        return jsonify({"success": False, "error": "Name is required"}), 400
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("UPDATE sections SET name=? WHERE id=?", (name, section_id))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
@@ -256,8 +293,8 @@ def api_upload_sound():
         return jsonify({"success": False, "error": "file missing"}), 400
     f = request.files['file']
     filename = f.filename
-    if not (filename.lower().endswith('.wav') or filename.lower().endswith('.mp3')):
-        return jsonify({"success": False, "error": "Only .wav and .mp3 files allowed"}), 400
+    if not (filename.lower().endswith(('.wav', '.mp3', '.ogg', '.aif', '.aiff'))):
+        return jsonify({"success": False, "error": "Only .wav, .mp3, .ogg, .aif, and .aiff files allowed"}), 400
         
     name = request.form.get("name") or f.filename
     filename = f.filename
@@ -435,6 +472,78 @@ def api_verify_admin():
         return jsonify({"success": False, "error": "Invalid password"}), 401
         
     return jsonify({"success": True})
+
+@app.route("/api/school_info")
+def api_school_info():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT key, value FROM system_settings WHERE key IN ('school_name', 'school_logo')")
+    rows = cur.fetchall()
+    info = {r["key"]: r["value"] for r in rows}
+    conn.close()
+    return jsonify(info)
+
+@app.route("/api/update_school_info", methods=["POST"])
+def api_update_school_info():
+    data = request.json
+    password = data.get("password")
+    school_name = data.get("school_name")
+    school_logo = data.get("school_logo")
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT value FROM system_settings WHERE key='admin_password'")
+    row = cur.fetchone()
+    
+    if not row or row["value"] != password:
+        conn.close()
+        return jsonify({"success": False, "error": "Invalid password"}), 401
+    
+    if school_name:
+        cur.execute("UPDATE system_settings SET value=? WHERE key='school_name'", (school_name,))
+    if school_logo:
+        cur.execute("UPDATE system_settings SET value=? WHERE key='school_logo'", (school_logo,))
+    
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+@app.route("/api/upload_logo", methods=["POST"])
+def api_upload_logo():
+    if 'file' not in request.files:
+        return jsonify({"success": False, "error": "file missing"}), 400
+    
+    password = request.form.get("password")
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT value FROM system_settings WHERE key='admin_password'")
+    pw_row = cur.fetchone()
+    if not pw_row or pw_row["value"] != password:
+        conn.close()
+        return jsonify({"success": False, "error": "Invalid password"}), 401
+    
+    f = request.files['file']
+    filename = "logo_" + f.filename
+    # Define a custom location for logos to avoid confusion with bell sounds
+    LOGOS_DIR = os.path.join(WRITABLE_DIR, "logos")
+    os.makedirs(LOGOS_DIR, exist_ok=True)
+    
+    safe_path = os.path.join(LOGOS_DIR, filename)
+    f.save(safe_path)
+    
+    # We'll serve this via a new route or just return the static path if it's in static
+    # But since it's in WRITABLE_DIR, we need a route
+    logo_url = f"/api/logos/{filename}"
+    
+    cur.execute("UPDATE system_settings SET value=? WHERE key='school_logo'", (logo_url,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "logo_url": logo_url})
+
+@app.route("/api/logos/<path:filename>")
+def serve_logo(filename):
+    LOGOS_DIR = os.path.join(WRITABLE_DIR, "logos")
+    return send_from_directory(LOGOS_DIR, filename)
 
 def scheduler_loop():
     print("Scheduler thread started")
