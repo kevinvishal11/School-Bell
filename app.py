@@ -596,6 +596,7 @@ def serve_logo(filename):
     LOGOS_DIR = os.path.join(WRITABLE_DIR, "logos")
     return send_from_directory(LOGOS_DIR, filename)
 
+
 def scheduler_loop():
     print("Scheduler thread started")
     last_minute = None
