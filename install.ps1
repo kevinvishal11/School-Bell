@@ -48,6 +48,11 @@ $Shortcut.Save()
 
 Write-Host "`n--- Success! ---" -ForegroundColor Green
 Write-Host "The $DisplayName has been installed."
-Write-Host "You can now open it from your Desktop or Start Menu."
+Write-Host "Launching the app now to register system settings..."
+
+# Launch the app from the new location
+Start-Process (Join-Path $InstallDir "$AppName.exe")
+
+Write-Host "You can also open it any time from your Desktop or Start Menu."
 Write-Host "Close this window to finish."
 pause
