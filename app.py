@@ -170,8 +170,14 @@ def init_db():
         cur.execute("INSERT INTO system_settings (key, value) VALUES ('school_logo', 'static/school-logo.png')")
     
     cur.execute("SELECT value FROM system_settings WHERE key='auto_start'")
-    if not cur.fetchone():
+    row = cur.fetchone()
+    if not row:
         cur.execute("INSERT INTO system_settings (key, value) VALUES ('auto_start', '0')")
+    else:
+        # Refresh registry on startup to handle path changes (e.g. if app was moved)
+        if row["value"] == "1":
+            print("Auto-start is enabled, refreshing registry path...")
+            set_windows_autostart(True)
 
     conn.commit()
     conn.close()
@@ -507,6 +513,10 @@ def set_windows_autostart(enabled):
             # If running from script (fallback)
             app_dir = os.path.dirname(os.path.abspath(__file__))
             exe_path = f'"{sys.executable}" "{os.path.join(app_dir, "main_app.py")}"'
+
+        # Ensure exe_path is quoted for registry
+        if not exe_path.startswith('"'):
+            exe_path = f'"{exe_path}"'
 
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
         
