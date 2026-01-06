@@ -65,7 +65,6 @@ def init_db():
         if os.path.exists(old_db):
             print(f"Migrating database from {old_db} to {safe_db}")
             try:
-                import shutil
                 shutil.copy2(old_db, safe_db)
             except Exception as e:
                 print(f"Migration failed: {e}")
@@ -170,6 +169,10 @@ def init_db():
     if not cur.fetchone():
         cur.execute("INSERT INTO system_settings (key, value) VALUES ('school_logo', 'static/school-logo.png')")
     
+    cur.execute("SELECT value FROM system_settings WHERE key='auto_start'")
+    if not cur.fetchone():
+        cur.execute("INSERT INTO system_settings (key, value) VALUES ('auto_start', '0')")
+
     conn.commit()
     conn.close()
     print("Database initialization complete.")
@@ -477,11 +480,49 @@ def api_verify_admin():
 def api_school_info():
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT key, value FROM system_settings WHERE key IN ('school_name', 'school_logo')")
+    cur.execute("SELECT key, value FROM system_settings WHERE key IN ('school_name', 'school_logo', 'auto_start')")
     rows = cur.fetchall()
     info = {r["key"]: r["value"] for r in rows}
     conn.close()
     return jsonify(info)
+
+def set_windows_autostart(enabled):
+    """
+    Manages Windows Registry to enable/disable auto-start.
+    Does nothing if not on Windows.
+    """
+    if sys.platform != "win32":
+        return True, "Auto-start only supported on Windows"
+        
+    try:
+        import winreg
+        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+        app_name = "SchoolBellApp"
+        
+        # Determine current executable path
+        if getattr(sys, 'frozen', False):
+            # If bundled by PyInstaller
+            exe_path = sys.executable
+        else:
+            # If running from script (fallback)
+            app_dir = os.path.dirname(os.path.abspath(__file__))
+            exe_path = f'"{sys.executable}" "{os.path.join(app_dir, "main_app.py")}"'
+
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
+        
+        if enabled:
+            winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, exe_path)
+        else:
+            try:
+                winreg.DeleteValue(key, app_name)
+            except FileNotFoundError:
+                pass # Already deleted
+                
+        winreg.CloseKey(key)
+        return True, "Registry updated"
+    except Exception as e:
+        print(f"Registry error: {e}")
+        return False, str(e)
 
 @app.route("/api/update_school_info", methods=["POST"])
 def api_update_school_info():
@@ -489,6 +530,7 @@ def api_update_school_info():
     password = data.get("password")
     school_name = data.get("school_name")
     school_logo = data.get("school_logo")
+    auto_start = data.get("auto_start") # '1' or '0'
 
     conn = get_conn()
     cur = conn.cursor()
@@ -504,6 +546,15 @@ def api_update_school_info():
     if school_logo:
         cur.execute("UPDATE system_settings SET value=? WHERE key='school_logo'", (school_logo,))
     
+    if auto_start is not None:
+        # Update registry
+        success, msg = set_windows_autostart(auto_start == "1")
+        if success:
+            cur.execute("UPDATE system_settings SET value=? WHERE key='auto_start'", (auto_start,))
+        else:
+            # If registry fail, still return error but maybe we can ignore it if non-critical
+            print(f"Failed to update auto-start in registry: {msg}")
+
     conn.commit()
     conn.close()
     return jsonify({"success": True})

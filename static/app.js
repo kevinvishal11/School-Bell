@@ -469,8 +469,13 @@ async function verifyAdminSettings() {
       $("admin-settings-auth").style.display = "none";
       $("admin-settings-form").style.display = "block";
       msg.innerText = "";
-      // Pre-fill form
-      $("edit-school-name").value = $("display-name").innerText;
+
+      // Fetch current info to pre-fill
+      const infoRes = await fetch("/api/school_info");
+      const info = await infoRes.json();
+
+      $("edit-school-name").value = info.school_name || "";
+      $("edit-auto-start").checked = info.auto_start === "1";
     } else {
       msg.innerText = json.error || "Verification failed";
       msg.style.color = "red";
@@ -506,7 +511,8 @@ async function saveAdminSettings() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         password: adminSettingsPassword,
-        school_name: name
+        school_name: name,
+        auto_start: $("edit-auto-start").checked ? "1" : "0"
       })
     });
     const json = await res.json();
