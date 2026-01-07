@@ -3,7 +3,7 @@ import subprocess
 import sys
 
 # Name of the executable
-APP_NAME = "SchoolBellApp"
+APP_NAME = "SchoolBell"
 
 # Convert PNG to ICO if needed
 if os.path.exists("icon.png"):
