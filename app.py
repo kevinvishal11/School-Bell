@@ -494,7 +494,7 @@ def api_school_info():
 
 def set_windows_autostart(enabled):
     """
-    Manages Windows Registry to enable/disable auto-start.
+    Manages both Windows Registry and Startup Folder shortcut to enable/disable auto-start.
     Does nothing if not on Windows.
     """
     if sys.platform != "win32":
@@ -518,20 +518,63 @@ def set_windows_autostart(enabled):
         if not exe_path.startswith('"'):
             exe_path = f'"{exe_path}"'
 
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
-        
-        if enabled:
-            winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, exe_path)
-        else:
-            try:
-                winreg.DeleteValue(key, app_name)
-            except FileNotFoundError:
-                pass # Already deleted
-                
-        winreg.CloseKey(key)
-        return True, "Registry updated"
+        # --- Method 1: Registry ---
+        try:
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
+            if enabled:
+                winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, exe_path)
+            else:
+                try:
+                    winreg.DeleteValue(key, app_name)
+                except FileNotFoundError:
+                    pass 
+            winreg.CloseKey(key)
+        except Exception as reg_err:
+            print(f"Registry auto-start update failed: {reg_err}")
+
+        # --- Method 2: Startup Folder Shortcut (More robust) ---
+        try:
+            import comtypes.client
+            import winshell
+            from win32com.client import Dispatch
+            
+            startup_path = os.path.join(os.environ["APPDATA"], "Microsoft", "Windows", "Start Menu", "Programs", "Startup")
+            shortcut_path = os.path.join(startup_path, "SchoolBell.lnk")
+            
+            if enabled:
+                shell = Dispatch('WScript.Shell')
+                shortcut = shell.CreateShortCut(shortcut_path)
+                shortcut.Targetpath = sys.executable if getattr(sys, 'frozen', False) else sys.executable
+                if not getattr(sys, 'frozen', False):
+                    # For script mode
+                    shortcut.Arguments = f'"{os.path.join(os.path.dirname(os.path.abspath(__file__)), "main_app.py")}"'
+                shortcut.WorkingDirectory = os.path.dirname(os.path.abspath(__file__))
+                shortcut.IconLocation = sys.executable if getattr(sys, 'frozen', False) else ""
+                shortcut.save()
+            else:
+                if os.path.exists(shortcut_path):
+                    os.remove(shortcut_path)
+        except ImportError:
+            # If winshell/pywin32 not present, we fall back to a simpler approach or just rely on registry
+            # Actually, we can use a small PowerShell command via subprocess to create the shortcut if pywin32 is missing
+            import subprocess
+            startup_path = os.path.join(os.environ["APPDATA"], "Microsoft", "Windows", "Start Menu", "Programs", "Startup")
+            shortcut_path = os.path.join(startup_path, "SchoolBell.lnk")
+            
+            if enabled:
+                target_exe = sys.executable
+                work_dir = os.path.dirname(os.path.abspath(__file__))
+                ps_cmd = f"$s=(New-Object -COM WScript.Shell).CreateShortcut('{shortcut_path}');$s.TargetPath='{target_exe}';$s.WorkingDirectory='{work_dir}';$s.Save()"
+                subprocess.run(["powershell", "-Command", ps_cmd], capture_output=True)
+            else:
+                if os.path.exists(shortcut_path):
+                    os.remove(shortcut_path)
+        except Exception as startup_err:
+            print(f"Startup folder auto-start update failed: {startup_err}")
+
+        return True, "Auto-start synchronized"
     except Exception as e:
-        print(f"Registry error: {e}")
+        print(f"Auto-start sync error: {e}")
         return False, str(e)
 
 @app.route("/api/update_school_info", methods=["POST"])
