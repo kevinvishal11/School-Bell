@@ -49,19 +49,27 @@ $Shortcut.Save()
 # 6. Register for Auto-Start (Multi-Method for maximum reliability)
 Write-Host "Registering for Auto-Start on Boot..."
 $ExePath = (Join-Path $InstallDir "$AppName.exe")
-$QuotedExe = "`"$ExePath`""
 
-# Method A: Task Scheduler (The most reliable for "At Boot")
-# Creates a task that runs at Logon with Highest Privileges
-schtasks /create /tn $AppName /tr $QuotedExe /sc onlogon /rl highest /f | Out-Null
+# Method A: Task Scheduler (The most reliable for "At Boot" on Laptops)
+# Creates a task that ignores "AC Power" restrictions
+try {
+    $action = New-ScheduledTaskAction -Execute $ExePath
+    $trigger = New-ScheduledTaskTrigger -AtLogOn
+    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+    Register-ScheduledTask -TaskName $AppName -Action $action -Trigger $trigger -Settings $settings -RunLevel Highest -Force | Out-Null
+    Write-Host "  - Task Scheduler: SUCCESS" -ForegroundColor Gray
+} catch {
+    Write-Host "  - Task Scheduler: FAILED (Fallback to Registry only)" -ForegroundColor Yellow
+}
 
 # Method B: Registry Run Key
 New-ItemProperty `
   -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" `
   -Name $AppName `
-  -Value $QuotedExe `
+  -Value "`"$ExePath`"" `
   -PropertyType String `
   -Force | Out-Null
+Write-Host "  - Registry: SUCCESS" -ForegroundColor Gray
 
 Write-Host "`n--- Success! ---" -ForegroundColor Green
 Write-Host "The $DisplayName has been installed."

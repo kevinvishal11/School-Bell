@@ -515,12 +515,17 @@ def set_windows_autostart(enabled):
         quoted_exe = '"' + exe_path.strip('"') + '"'
 
         # --- Method 1: Task Scheduler (The most reliable "At Boot/Logon" method) ---
+        # We use a more advanced PowerShell method here to disable "AC Power" restrictions
+        # which often block tasks from starting on laptops when not plugged in.
         try:
             if enabled:
-                # Create a task that runs at logon with highest privileges
-                # Use /it to make it interactive (show the window)
-                cmd = f'schtasks /create /tn "{app_name}" /tr {quoted_exe} /sc onlogon /rl highest /f'
-                subprocess.run(cmd, shell=True, capture_output=True)
+                ps_task_cmd = f'''
+                $action = New-ScheduledTaskAction -Execute "{exe_path.strip('"')}"
+                $trigger = New-ScheduledTaskTrigger -AtLogOn
+                $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+                Register-ScheduledTask -TaskName "{app_name}" -Action $action -Trigger $trigger -Settings $settings -RunLevel Highest -Force
+                '''
+                subprocess.run(["powershell", "-Command", ps_task_cmd.strip()], capture_output=True)
             else:
                 subprocess.run(f'schtasks /delete /tn "{app_name}" /f', shell=True, capture_output=True)
         except Exception as e:
