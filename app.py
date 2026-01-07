@@ -494,85 +494,65 @@ def api_school_info():
 
 def set_windows_autostart(enabled):
     """
-    Manages both Windows Registry and Startup Folder shortcut to enable/disable auto-start.
-    Does nothing if not on Windows.
+    Manages multiple Windows auto-start methods: Task Scheduler (Primary), 
+    Registry (Secondary), and Startup Folder (Fallback).
     """
     if sys.platform != "win32":
         return True, "Auto-start only supported on Windows"
         
     try:
-        import winreg
-        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
-        app_name = "SchoolBellApp"
+        import subprocess
+        app_name = "SchoolBell"
         
         # Determine current executable path
         if getattr(sys, 'frozen', False):
-            # If bundled by PyInstaller
             exe_path = sys.executable
         else:
-            # If running from script (fallback)
             app_dir = os.path.dirname(os.path.abspath(__file__))
             exe_path = f'"{sys.executable}" "{os.path.join(app_dir, "main_app.py")}"'
 
-        # Ensure exe_path is quoted for registry
-        if not exe_path.startswith('"'):
-            exe_path = f'"{exe_path}"'
+        # Ensure exe_path is quoted correctly for commands
+        quoted_exe = f'"{exe_path.strip(\'"\')}"'
 
-        # --- Method 1: Registry (Using robust PowerShell command) ---
-        import subprocess
+        # --- Method 1: Task Scheduler (The most reliable "At Boot/Logon" method) ---
         try:
             if enabled:
-                ps_reg_cmd = f'New-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" -Name "{app_name}" -Value "\'{exe_path}\'" -PropertyType String -Force'
+                # Create a task that runs at logon with highest privileges
+                # Use /it to make it interactive (show the window)
+                cmd = f'schtasks /create /tn "{app_name}" /tr {quoted_exe} /sc onlogon /rl highest /f'
+                subprocess.run(cmd, shell=True, capture_output=True)
+            else:
+                subprocess.run(f'schtasks /delete /tn "{app_name}" /f', shell=True, capture_output=True)
+        except Exception as e:
+            print(f"Task Scheduler sync failed: {e}")
+
+        # --- Method 2: Registry (PowerShell approach) ---
+        try:
+            if enabled:
+                ps_reg_cmd = f'New-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" -Name "{app_name}" -Value {quoted_exe} -PropertyType String -Force'
                 subprocess.run(["powershell", "-Command", ps_reg_cmd], capture_output=True)
             else:
                 ps_reg_cmd = f'Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" -Name "{app_name}" -ErrorAction SilentlyContinue'
                 subprocess.run(["powershell", "-Command", ps_reg_cmd], capture_output=True)
-        except Exception as reg_err:
-            print(f"Registry auto-start update via PowerShell failed: {reg_err}")
+        except Exception as e:
+            print(f"Registry sync failed: {e}")
 
-        # --- Method 2: Startup Folder Shortcut ---
+        # --- Method 3: Startup Folder Shortcut ---
         try:
-            import comtypes.client
-            import winshell
-            from win32com.client import Dispatch
-            
             startup_path = os.path.join(os.environ["APPDATA"], "Microsoft", "Windows", "Start Menu", "Programs", "Startup")
-            shortcut_path = os.path.join(startup_path, "SchoolBell.lnk")
-            
+            shortcut_path = os.path.join(startup_path, f"{app_name}.lnk")
             if enabled:
-                shell = Dispatch('WScript.Shell')
-                shortcut = shell.CreateShortCut(shortcut_path)
-                shortcut.Targetpath = sys.executable if getattr(sys, 'frozen', False) else sys.executable
-                if not getattr(sys, 'frozen', False):
-                    # For script mode
-                    shortcut.Arguments = f'"{os.path.join(os.path.dirname(os.path.abspath(__file__)), "main_app.py")}"'
-                shortcut.WorkingDirectory = os.path.dirname(os.path.abspath(__file__))
-                shortcut.IconLocation = sys.executable if getattr(sys, 'frozen', False) else ""
-                shortcut.save()
-            else:
-                if os.path.exists(shortcut_path):
-                    os.remove(shortcut_path)
-        except ImportError:
-            # If winshell/pywin32 not present, we fall back to a simpler approach or just rely on registry
-            # Actually, we can use a small PowerShell command via subprocess to create the shortcut if pywin32 is missing
-            import subprocess
-            startup_path = os.path.join(os.environ["APPDATA"], "Microsoft", "Windows", "Start Menu", "Programs", "Startup")
-            shortcut_path = os.path.join(startup_path, "SchoolBell.lnk")
-            
-            if enabled:
-                target_exe = sys.executable
                 work_dir = os.path.dirname(os.path.abspath(__file__))
-                ps_cmd = f"$s=(New-Object -COM WScript.Shell).CreateShortcut('{shortcut_path}');$s.TargetPath='{target_exe}';$s.WorkingDirectory='{work_dir}';$s.Save()"
-                subprocess.run(["powershell", "-Command", ps_cmd], capture_output=True)
+                ps_sc_cmd = f"$s=(New-Object -COM WScript.Shell).CreateShortcut('{shortcut_path}');$s.TargetPath={quoted_exe};$s.WorkingDirectory='{work_dir}';$s.Save()"
+                subprocess.run(["powershell", "-Command", ps_sc_cmd], capture_output=True)
             else:
-                if os.path.exists(shortcut_path):
-                    os.remove(shortcut_path)
-        except Exception as startup_err:
-            print(f"Startup folder auto-start update failed: {startup_err}")
+                if os.path.exists(shortcut_path): os.remove(shortcut_path)
+        except Exception as e:
+            print(f"Startup folder sync failed: {e}")
 
         return True, "Auto-start synchronized"
     except Exception as e:
-        print(f"Auto-start sync error: {e}")
+        print(f"Auto-start master error: {e}")
         return False, str(e)
 
 @app.route("/api/update_school_info", methods=["POST"])
