@@ -46,6 +46,16 @@ $Shortcut.TargetPath = (Join-Path $InstallDir "$AppName.exe")
 $Shortcut.WorkingDirectory = $InstallDir
 $Shortcut.Save()
 
+# 6. Register for Auto-Start (Registry Method)
+Write-Host "Registering for Auto-Start on Boot..."
+$ExePath = (Join-Path $InstallDir "$AppName.exe")
+New-ItemProperty `
+  -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" `
+  -Name $AppName `
+  -Value "`"$ExePath`"" `
+  -PropertyType String `
+  -Force | Out-Null
+
 Write-Host "`n--- Success! ---" -ForegroundColor Green
 Write-Host "The $DisplayName has been installed."
 Write-Host "Launching the app now to register system settings..."

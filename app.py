@@ -518,21 +518,19 @@ def set_windows_autostart(enabled):
         if not exe_path.startswith('"'):
             exe_path = f'"{exe_path}"'
 
-        # --- Method 1: Registry ---
+        # --- Method 1: Registry (Using robust PowerShell command) ---
+        import subprocess
         try:
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
             if enabled:
-                winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, exe_path)
+                ps_reg_cmd = f'New-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" -Name "{app_name}" -Value "\'{exe_path}\'" -PropertyType String -Force'
+                subprocess.run(["powershell", "-Command", ps_reg_cmd], capture_output=True)
             else:
-                try:
-                    winreg.DeleteValue(key, app_name)
-                except FileNotFoundError:
-                    pass 
-            winreg.CloseKey(key)
+                ps_reg_cmd = f'Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" -Name "{app_name}" -ErrorAction SilentlyContinue'
+                subprocess.run(["powershell", "-Command", ps_reg_cmd], capture_output=True)
         except Exception as reg_err:
-            print(f"Registry auto-start update failed: {reg_err}")
+            print(f"Registry auto-start update via PowerShell failed: {reg_err}")
 
-        # --- Method 2: Startup Folder Shortcut (More robust) ---
+        # --- Method 2: Startup Folder Shortcut ---
         try:
             import comtypes.client
             import winshell
