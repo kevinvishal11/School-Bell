@@ -512,7 +512,7 @@ def set_windows_autostart(enabled):
             exe_path = f'"{sys.executable}" "{os.path.join(app_dir, "main_app.py")}"'
 
         # Ensure exe_path is quoted correctly for commands
-        quoted_exe = f'"{exe_path.strip(\'"\')}"'
+        quoted_exe = '"' + exe_path.strip('"') + '"'
 
         # --- Method 1: Task Scheduler (The most reliable "At Boot/Logon" method) ---
         try:
