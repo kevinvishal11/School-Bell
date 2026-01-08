@@ -51,12 +51,13 @@ Write-Host "Registering for Auto-Start on Boot..."
 $ExePath = (Join-Path $InstallDir "$AppName.exe")
 
 # Method A: Task Scheduler (The most reliable for "At Boot" on Laptops)
-# Creates a task that ignores "AC Power" restrictions
+# Creates a task that ignores "AC Power" restrictions and sets WorkingDir
 try {
-    $action = New-ScheduledTaskAction -Execute $ExePath
+    $action = New-ScheduledTaskAction -Execute $ExePath -WorkingDirectory $InstallDir
     $trigger = New-ScheduledTaskTrigger -AtLogOn
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-    Register-ScheduledTask -TaskName $AppName -Action $action -Trigger $trigger -Settings $settings -RunLevel Highest -Force | Out-Null
+    # We use "Limited" RunLevel for GUI apps to ensure they appear in the user's session
+    Register-ScheduledTask -TaskName $AppName -Action $action -Trigger $trigger -Settings $settings -RunLevel Limited -Force | Out-Null
     Write-Host "  - Task Scheduler: SUCCESS" -ForegroundColor Gray
 } catch {
     Write-Host "  - Task Scheduler: FAILED (Fallback to Registry only)" -ForegroundColor Yellow

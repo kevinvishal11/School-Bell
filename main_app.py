@@ -7,10 +7,24 @@ import ctypes
 # Note: We move heavy imports inside the try block to catch crashes during library loading
 
 if __name__ == "__main__":
+    # Ensure working directory is set to the folder containing this file
+    # (Vital for Task Scheduler launched apps)
+    app_base_path = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(app_base_path)
+
     print("-" * 50)
     print("SCHOOL BELL DESKTOP SYSTEM STARTING...")
     print("-" * 50)
     
+    # Startup Diagnostic Logging
+    try:
+        from app import get_writable_dir
+        diag_log = os.path.join(get_writable_dir(), "startup_diag.txt")
+        with open(diag_log, "a") as f:
+            f.write(f"\n[{time.ctime()}] App starting. CWD: {os.getcwd()}, Frozen: {getattr(sys, 'frozen', False)}")
+    except:
+        pass
+
     # Windows background execution fix
     if sys.platform == "win32":
         print("Applying Windows background execution optimization...")

@@ -519,11 +519,12 @@ def set_windows_autostart(enabled):
         # which often block tasks from starting on laptops when not plugged in.
         try:
             if enabled:
+                work_dir = os.path.dirname(os.path.abspath(__file__))
                 ps_task_cmd = f'''
-                $action = New-ScheduledTaskAction -Execute "{exe_path.strip('"')}"
+                $action = New-ScheduledTaskAction -Execute "{exe_path.strip('"')}" -WorkingDirectory "{work_dir}"
                 $trigger = New-ScheduledTaskTrigger -AtLogOn
                 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-                Register-ScheduledTask -TaskName "{app_name}" -Action $action -Trigger $trigger -Settings $settings -RunLevel Highest -Force
+                Register-ScheduledTask -TaskName "{app_name}" -Action $action -Trigger $trigger -Settings $settings -RunLevel Limited -Force
                 '''
                 subprocess.run(["powershell", "-Command", ps_task_cmd.strip()], capture_output=True)
             else:
