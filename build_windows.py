@@ -28,7 +28,7 @@ CONSOLE_FLAG = "--noconsole"
 cmd = [
     "pyinstaller",
     "--clean",
-    "--onefile",
+    "--onedir",
     CONSOLE_FLAG,
     "--name", APP_NAME,
     "--collect-all", "webview",

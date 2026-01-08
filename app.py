@@ -494,14 +494,15 @@ def api_school_info():
 
 def set_windows_autostart(enabled):
     """
-    Manages multiple Windows auto-start methods: Task Scheduler (Primary), 
-    Registry (Secondary), and Startup Folder (Fallback).
+    Manages a simple Windows Registry key to enable/disable auto-start.
+    Standard method that shows up in Task Manager > Startup.
     """
     if sys.platform != "win32":
         return True, "Auto-start only supported on Windows"
         
     try:
-        import subprocess
+        import winreg
+        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
         app_name = "SchoolBell"
         
         # Determine current executable path
@@ -511,54 +512,22 @@ def set_windows_autostart(enabled):
             app_dir = os.path.dirname(os.path.abspath(__file__))
             exe_path = f'"{sys.executable}" "{os.path.join(app_dir, "main_app.py")}"'
 
-        # Ensure exe_path is quoted correctly for commands
-        quoted_exe = '"' + exe_path.strip('"') + '"'
+        # Ensure exe_path is quoted
+        if not exe_path.startswith('"'):
+            exe_path = f'"{exe_path}"'
 
-        # --- Method 1: Task Scheduler (The most reliable "At Boot/Logon" method) ---
-        # We use a more advanced PowerShell method here to disable "AC Power" restrictions
-        # which often block tasks from starting on laptops when not plugged in.
-        try:
-            if enabled:
-                work_dir = os.path.dirname(os.path.abspath(__file__))
-                ps_task_cmd = f'''
-                $action = New-ScheduledTaskAction -Execute "{exe_path.strip('"')}" -WorkingDirectory "{work_dir}"
-                $trigger = New-ScheduledTaskTrigger -AtLogOn
-                $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-                Register-ScheduledTask -TaskName "{app_name}" -Action $action -Trigger $trigger -Settings $settings -RunLevel Limited -Force
-                '''
-                subprocess.run(["powershell", "-Command", ps_task_cmd.strip()], capture_output=True)
-            else:
-                subprocess.run(f'schtasks /delete /tn "{app_name}" /f', shell=True, capture_output=True)
-        except Exception as e:
-            print(f"Task Scheduler sync failed: {e}")
-
-        # --- Method 2: Registry (PowerShell approach) ---
-        try:
-            if enabled:
-                ps_reg_cmd = f'New-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" -Name "{app_name}" -Value {quoted_exe} -PropertyType String -Force'
-                subprocess.run(["powershell", "-Command", ps_reg_cmd], capture_output=True)
-            else:
-                ps_reg_cmd = f'Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" -Name "{app_name}" -ErrorAction SilentlyContinue'
-                subprocess.run(["powershell", "-Command", ps_reg_cmd], capture_output=True)
-        except Exception as e:
-            print(f"Registry sync failed: {e}")
-
-        # --- Method 3: Startup Folder Shortcut ---
-        try:
-            startup_path = os.path.join(os.environ["APPDATA"], "Microsoft", "Windows", "Start Menu", "Programs", "Startup")
-            shortcut_path = os.path.join(startup_path, f"{app_name}.lnk")
-            if enabled:
-                work_dir = os.path.dirname(os.path.abspath(__file__))
-                ps_sc_cmd = f"$s=(New-Object -COM WScript.Shell).CreateShortcut('{shortcut_path}');$s.TargetPath={quoted_exe};$s.WorkingDirectory='{work_dir}';$s.Save()"
-                subprocess.run(["powershell", "-Command", ps_sc_cmd], capture_output=True)
-            else:
-                if os.path.exists(shortcut_path): os.remove(shortcut_path)
-        except Exception as e:
-            print(f"Startup folder sync failed: {e}")
-
-        return True, "Auto-start synchronized"
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
+        if enabled:
+            winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, exe_path)
+        else:
+            try:
+                winreg.DeleteValue(key, app_name)
+            except FileNotFoundError:
+                pass 
+        winreg.CloseKey(key)
+        return True, "Auto-start updated"
     except Exception as e:
-        print(f"Auto-start master error: {e}")
+        print(f"Auto-start registry error: {e}")
         return False, str(e)
 
 @app.route("/api/update_school_info", methods=["POST"])
