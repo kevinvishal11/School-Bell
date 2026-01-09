@@ -17,6 +17,8 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 ; Customize the output filename
 OutputBaseFilename=SchoolBell_Setup
+SetupIconFile=icon.ico
+UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
