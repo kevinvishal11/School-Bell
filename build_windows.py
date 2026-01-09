@@ -32,7 +32,11 @@ cmd = [
     CONSOLE_FLAG,
     "--name", APP_NAME,
     "--collect-all", "webview",
+    "--collect-all", "pystray",
+    "--collect-all", "PIL",
     "--hidden-import", "clr",
+    "--hidden-import", "pystray",
+    "--hidden-import", "PIL.Image",
 ]
 
 if icon_path and os.path.exists(icon_path):

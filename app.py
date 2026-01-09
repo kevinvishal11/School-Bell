@@ -507,15 +507,12 @@ def set_windows_autostart(enabled):
         
         # Determine current executable path
         if getattr(sys, 'frozen', False):
-            exe_path = sys.executable
+            exe_path = f'"{sys.executable}" --startup'
         else:
             app_dir = os.path.dirname(os.path.abspath(__file__))
-            exe_path = f'"{sys.executable}" "{os.path.join(app_dir, "main_app.py")}"'
+            exe_path = f'"{sys.executable}" "{os.path.join(app_dir, "main_app.py")}" --startup'
 
-        # Ensure exe_path is quoted
-        if not exe_path.startswith('"'):
-            exe_path = f'"{exe_path}"'
-
+        # Update Registry
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
         if enabled:
             winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, exe_path)
