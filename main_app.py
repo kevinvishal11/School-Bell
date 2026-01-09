@@ -73,9 +73,9 @@ if __name__ == "__main__":
         # 4. Start Native GUI Window
         import webview
         
-        icon_path = os.path.join(os.path.abspath("."), "icon.ico")
+        icon_path = os.path.join(app_base_path, "icon.ico")
         if not os.path.exists(icon_path):
-             icon_path = os.path.join(os.path.abspath("."), "icon.png")
+             icon_path = os.path.join(app_base_path, "icon.png")
 
         window = webview.create_window(
             'School Bell Control System', 

@@ -11,11 +11,13 @@ import shutil
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
-    try:
+    if getattr(sys, 'frozen', False):
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
+    else:
+        # Development mode: use folder where app.py resides
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    
     return os.path.join(base_path, relative_path)
 
 def get_writable_dir():
