@@ -20,15 +20,16 @@ else:
     icon_path = None
 
 # Command to run PyInstaller
-# --onefile: Bundle everything into a single EXE
-# --add-data: Include templates, static, and sounds
-# --noconsole: Hide the console window
-CONSOLE_FLAG = "--noconsole" 
+# --onedir: Standard professional folder structure
+# --noupx: DISABLING UPX to fix "Failed to load Python DLL" on Windows 11
+# --console: Temporarily enabling console to see startup errors if it still fails
+CONSOLE_FLAG = "--console" 
 
 cmd = [
     "pyinstaller",
     "--clean",
     "--onedir",
+    "--noupx",
     CONSOLE_FLAG,
     "--name", APP_NAME,
     "--collect-all", "webview",
