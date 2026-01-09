@@ -14,21 +14,20 @@ except ImportError:
 # Note: We move heavy imports inside the try block to catch crashes during library loading
 
 if __name__ == "__main__":
+    # 0. PRIMITIVE LOGGING (No heavy imports allowed here)
+    try:
+        log_dir = os.path.join(os.path.expanduser("~"), "SchoolBellData")
+        if not os.path.exists(log_dir): os.makedirs(log_dir, exist_ok=True)
+        with open(os.path.join(log_dir, "boot_log.txt"), "a") as f:
+            f.write(f"\n[{time.ctime()}] BOOT: App triggered. Args: {sys.argv}")
+    except: pass
+
     # Parse arguments
     is_startup = "--startup" in sys.argv
 
     # Ensure working directory is set to the folder containing this file
     app_base_path = os.path.dirname(os.path.abspath(__file__))
     os.chdir(app_base_path)
-
-    # Diagnostic Logging
-    try:
-        from app import get_writable_dir
-        diag_log = os.path.join(get_writable_dir(), "startup_diag.txt")
-        with open(diag_log, "a") as f:
-            f.write(f"\n[{time.ctime()}] App starting. Startup mode: {is_startup}, CWD: {os.getcwd()}")
-    except:
-        pass
 
     # Windows background execution fix
     if sys.platform == "win32":
@@ -116,9 +115,11 @@ if __name__ == "__main__":
         window.events.closing += on_closing
 
         # Start the GUI
-        # We let webview pick the best available engine (usually Edge/WebView2 on Win11)
-        # instead of forcing deprecated MSHTML.
-        webview.start()
+        # FORCE Edge/WebView2 for Windows 11 compatibility
+        try:
+            webview.start(None, None, gui='edgechromium' if sys.platform == 'win32' else None)
+        except:
+            webview.start() # Fallback
             
         print("Main window hidden/closed. App running in background (Tray).")
         # Keep main thread alive for the tray icon if needed, 

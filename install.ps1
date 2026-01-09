@@ -46,31 +46,9 @@ $Shortcut.TargetPath = (Join-Path $InstallDir "$AppName.exe")
 $Shortcut.WorkingDirectory = $InstallDir
 $Shortcut.Save()
 
-# 6. Register for Auto-Start (Multi-Method for maximum reliability)
-Write-Host "Registering for Auto-Start on Boot..."
-$ExePath = (Join-Path $InstallDir "$AppName.exe")
-
-# Method A: Task Scheduler (The most reliable for "At Boot" on Laptops)
-# Creates a task that ignores "AC Power" restrictions and sets WorkingDir
-try {
-    $action = New-ScheduledTaskAction -Execute $ExePath -WorkingDirectory $InstallDir
-    $trigger = New-ScheduledTaskTrigger -AtLogOn
-    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-    # We use "Limited" RunLevel for GUI apps to ensure they appear in the user's session
-    Register-ScheduledTask -TaskName $AppName -Action $action -Trigger $trigger -Settings $settings -RunLevel Limited -Force | Out-Null
-    Write-Host "  - Task Scheduler: SUCCESS" -ForegroundColor Gray
-} catch {
-    Write-Host "  - Task Scheduler: FAILED (Fallback to Registry only)" -ForegroundColor Yellow
-}
-
-# Method B: Registry Run Key
-New-ItemProperty `
-  -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" `
-  -Name $AppName `
-  -Value "`"$ExePath`"" `
-  -PropertyType String `
-  -Force | Out-Null
-Write-Host "  - Registry: SUCCESS" -ForegroundColor Gray
+# 6. Register for Auto-Start
+Write-Host "Auto-start is now managed by the 'Start with Windows' setting in the app,"
+Write-Host "and the professional installer (SchoolBell_Setup.exe)."
 
 Write-Host "`n--- Success! ---" -ForegroundColor Green
 Write-Host "The $DisplayName has been installed."
