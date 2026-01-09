@@ -116,12 +116,9 @@ if __name__ == "__main__":
         window.events.closing += on_closing
 
         # Start the GUI
-        if is_startup:
-            # Start hidden if launched via startup
-            webview.start(None, None, gui='mshtml' if sys.platform == 'win32' else None)
-        else:
-            # Start visible
-            webview.start()
+        # We let webview pick the best available engine (usually Edge/WebView2 on Win11)
+        # instead of forcing deprecated MSHTML.
+        webview.start()
             
         print("Main window hidden/closed. App running in background (Tray).")
         # Keep main thread alive for the tray icon if needed, 

@@ -22,8 +22,8 @@ else:
 # Command to run PyInstaller
 # --onedir: Standard professional folder structure
 # --noupx: DISABLING UPX to fix "Failed to load Python DLL" on Windows 11
-# --console: Temporarily enabling console to see startup errors if it still fails
-CONSOLE_FLAG = "--console" 
+# --noconsole: Hide the console window now that DLL issue is fixed
+CONSOLE_FLAG = "--noconsole" 
 
 cmd = [
     "pyinstaller",
