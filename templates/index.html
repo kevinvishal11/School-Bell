@@ -217,14 +217,15 @@
 
   <footer class="app-footer">
     <div class="footer-content">
-      <div class="footer-branding">
-        <img src="{{ url_for('static', filename='gama-company-logo.jpg') }}" class="footer-logo" alt="Logo">
-        <div class="footer-info">
-          <h3 id="footer-school-name">GAMMA ELECTRONICS</h3>
-          <p>📞 Phone: +91 7411124368 | +91 94815 34635</p>
-          <p>🏠︎ Address: Kinnimulky, Udupi</p>
-          <p id="display-expiry" class="license-expiry-text-footer"></p>
+      <div class="footer-left">
+        <img src="{{ url_for('static', filename='gama-company-logo.jpg') }}" class="footer-logo-small" alt="Logo">
+        <div class="footer-text">
+          <p>Powered by <strong>GAMMA ELECTRONICS</strong></p>
+          <p>📞 +91 7411124368 | +91 94815 34635</p>
         </div>
+      </div>
+      <div class="footer-right">
+        <p id="display-expiry" class="license-expiry-text-footer"></p>
       </div>
     </div>
   </footer>
