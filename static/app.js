@@ -42,8 +42,13 @@ async function fetchSections() {
         openRenameModal(s.id, s.name);
       };
 
+      const daysList = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+      const isDaySection = daysList.includes(s.name);
+
       titleWrap.appendChild(title);
-      titleWrap.appendChild(editBtn);
+      if (!isDaySection) {
+        titleWrap.appendChild(editBtn);
+      }
 
       const right = document.createElement("div");
 
@@ -396,7 +401,8 @@ async function checkLicense() {
 
     // Expiry text
     if (json.expiry_date) {
-      $("display-expiry").innerText = `(License expires: ${json.expiry_date})`;
+      const expiryText = `(License expires: ${json.expiry_date})`;
+      if ($("display-expiry")) $("display-expiry").innerText = expiryText;
     }
 
     // Banner logic
@@ -434,7 +440,10 @@ async function fetchSchoolInfo() {
   try {
     const r = await fetch("/api/school_info");
     const json = await r.json();
-    if (json.school_name) $("display-name").innerText = json.school_name;
+    if (json.school_name) {
+      $("display-name").innerText = json.school_name;
+      //  if ($("footer-school-name")) $("footer-school-name").innerText = json.school_name;
+    }
     if (json.school_logo) $("display-logo").src = json.school_logo;
   } catch (e) {
     console.warn("fetchSchoolInfo failed", e);

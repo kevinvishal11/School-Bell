@@ -110,10 +110,23 @@ def init_db():
     print(f"Database: Found {section_count} sections.")
     if section_count == 0:
         print("Seeding default sections...")
-        for i in range(1, 15):
+        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        for i in range(7):
+            cur.execute("INSERT INTO sections (name, enabled) VALUES (?, 1)", (days[i],))
+        for i in range(8, 15):
             cur.execute("INSERT INTO sections (name, enabled) VALUES (?, 1)", (f"Section {i}",))
         conn.commit()
         print("Seeding default sections complete.")
+    else:
+        # Maintenance: FORCE first 7 sections to have correct names
+        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        cur.execute("SELECT id, name FROM sections ORDER BY id LIMIT 7")
+        rows = cur.fetchall()
+        for i, row in enumerate(rows):
+            if i < len(days) and row['name'] != days[i]:
+                print(f"Forcing section rename: {row['name']} -> {days[i]}")
+                cur.execute("UPDATE sections SET name = ? WHERE id = ?", (days[i], row['id']))
+        conn.commit()
     
     # 3. Seed Slots (48 per section)
     cur.execute("SELECT COUNT(*) FROM slots")
@@ -621,14 +634,32 @@ def scheduler_loop():
                 # New minute, check for alarms
                 conn = get_conn()
                 cur = conn.cursor()
-                # Query logic similar to api_active_alarms or specialized for exact match
-                cur.execute("""SELECT sl.id, sl.sound_id, snd.filename 
+                day_of_week = now.strftime("%A")
+                
+                # Query logic: 
+                # 1. Match current time
+                # 2. Both slot and section must be enabled
+                # 3. If section name is a day of the week, it MUST match current day
+                days_list = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+                
+                cur.execute("""SELECT sl.id, sl.sound_id, snd.filename, s.name as section_name
                                FROM slots sl
                                JOIN sections s ON sl.section_id = s.id
                                LEFT JOIN sounds snd ON sl.sound_id = snd.id
                                WHERE sl.time = ? AND sl.enabled = 1 AND s.enabled = 1""", (current_hm,))
-                rows = cur.fetchall()
+                all_rows = cur.fetchall()
                 conn.close()
+
+                # Filter rows by day
+                rows = []
+                for r in all_rows:
+                    sec_name = r['section_name']
+                    if sec_name in days_list:
+                        if sec_name == day_of_week:
+                            rows.append(r)
+                    else:
+                        # Non-day sections fire every day
+                        rows.append(r)
 
                 if rows:
                     print(f"Scheduler found {len(rows)} slots for {current_hm}")
