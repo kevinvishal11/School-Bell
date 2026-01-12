@@ -318,3 +318,65 @@ button.save-btn.unsaved {
   color: #d9534f !important;
   margin-top: 10px !important;
 }
+
+/* Collapsible Section Styles */
+.collapsible-container {
+  margin-bottom: 20px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.collapsible-header {
+  background: #f8f9fa;
+  padding: 12px 18px;
+  margin: 0;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  color: #0b3c6f;
+  transition: background 0.2s;
+}
+
+.collapsible-header:hover {
+  background: #f1f3f5;
+}
+
+.collapsible-header .chevron {
+  font-size: 0.8rem;
+  transition: transform 0.3s ease;
+  color: #666;
+}
+
+.collapsible-container:not(.collapsed-container) .chevron {
+  transform: rotate(180deg);
+}
+
+.collapsible-content {
+  max-height: 2000px;
+  /* Large enough to fit content */
+  opacity: 1;
+  overflow: hidden;
+  transition: max-height 0.4s ease-out, opacity 0.3s ease, padding 0.4s ease;
+  border: 1px solid #eee;
+  border-top: none;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  padding: 20px;
+}
+
+.collapsible-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border: none;
+}
+
+.collapsed-container .collapsible-header {
+  border-radius: 8px;
+}

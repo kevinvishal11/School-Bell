@@ -184,14 +184,23 @@
       </div>
     </div>
 
-    <section class="sections-wrap">
-      <h3>
+    <section class="sections-wrap collapsible-container" id="sections-container">
+      <h3 class="collapsible-header" onclick="toggleCollapse('sections-container')">
         Global Alarm Section (toggle on to allow alarms in that section)
+        <span class="chevron">▼</span>
       </h3>
-      <div id="sections" class="sections-grid"></div>
+      <div id="sections" class="sections-grid collapsible-content collapsed"></div>
     </section>
 
-    <section id="slots-area" class="slots-area"></section>
+    <section id="slots-area" class="slots-area collapsible-container">
+      <h3 class="collapsible-header" onclick="toggleCollapse('slots-area')">
+        Slots
+        <span class="chevron">▼</span>
+      </h3>
+      <div id="slots-content" class="collapsible-content collapsed">
+        <div class="slots-wrap-outer"></div>
+      </div>
+    </section>
 
     <section class="upload">
       <h4>Upload Sound (.mp3, .wav, .ogg, .aiff)</h4>

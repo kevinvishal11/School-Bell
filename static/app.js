@@ -11,6 +11,20 @@ function $(id) {
   return document.getElementById(id);
 }
 
+function toggleCollapse(containerId) {
+  const container = $(containerId);
+  const content = container.querySelector(".collapsible-content");
+  const isCollapsed = content.classList.contains("collapsed");
+
+  if (isCollapsed) {
+    content.classList.remove("collapsed");
+    container.classList.remove("collapsed-container");
+  } else {
+    content.classList.add("collapsed");
+    container.classList.add("collapsed-container");
+  }
+}
+
 async function fetchSections() {
   try {
     const r = await fetch("/api/sections");
@@ -132,11 +146,16 @@ async function loadAndRenderSlots(sectionId) {
   const r = await fetch(`/api/slots/${sectionId}`);
   const slots = await r.json();
   const area = $("slots-area");
-  let html = `<h3>${document.querySelector(".section-card.active")
+  const contentArea = area.querySelector(".collapsible-content");
+
+  // Update header text if needed (the header stays fixed now)
+  const header = area.querySelector(".collapsible-header");
+  const sectionName = document.querySelector(".section-card.active")
     ? document.querySelector(".section-card.active .title").innerText
-    : "Section"
-    } — Slots</h3>`;
-  html += `<div class="slots-wrap"><table class="slots-table"><thead><tr><th>#</th><th>Time</th><th>Sound</th><th>Enabled</th><th>Actions</th></tr></thead><tbody>`;
+    : "Section";
+  header.firstChild.textContent = `${sectionName} — Slots `;
+
+  let html = `<div class="slots-wrap"><table class="slots-table"><thead><tr><th>#</th><th>Time</th><th>Sound</th><th>Enabled</th><th>Actions</th></tr></thead><tbody>`;
   slots.forEach((s) => {
     const timeVal = s.time || "09:00";
     const [h24, m] = timeVal.split(":");
@@ -188,7 +207,7 @@ async function loadAndRenderSlots(sectionId) {
     </tr>`;
   });
   html += `</tbody></table></div>`;
-  area.innerHTML = html;
+  contentArea.innerHTML = html;
 }
 
 async function saveSlot(slotId) {
@@ -739,6 +758,11 @@ async function start() {
   await loadSounds();
   await checkLicense(); // Check immediately
   await refreshActive();
+
+  // Set initial collapsed state (containers are collapsed by default in HTML/CSS)
+  $("sections-container").classList.add("collapsed-container");
+  $("slots-area").classList.add("collapsed-container");
+
   setInterval(refreshActive, 30000);
   setInterval(checkLicense, 60000); // Check every minute
 }
