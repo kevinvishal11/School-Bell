@@ -66,20 +66,58 @@ button.danger {
 }
 
 .sections-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 10px;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 12px;
   margin-top: 10px;
+  overflow-x: scroll !important;
+  /* Force scrollbar visibility */
+  padding: 10px 5px 20px 5px;
+  /* Extra bottom padding for scrollbar */
+  scrollbar-width: auto;
+  /* Use standard scrollbar for better visibility */
+  scrollbar-color: #0b3c6f #e0e0e0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sections-grid::-webkit-scrollbar {
+  height: 10px;
+  /* Thicker scrollbar */
+}
+
+.sections-grid::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 5px;
+}
+
+.sections-grid::-webkit-scrollbar-thumb {
+  background: #0b3c6f;
+  border-radius: 5px;
+  border: 2px solid #f0f0f0;
+}
+
+.sections-grid::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 10px;
+}
+
+.sections-grid::-webkit-scrollbar-thumb {
+  background: #0b3c6f;
+  border-radius: 10px;
 }
 
 .section-card {
+  flex: 0 0 auto;
+  min-width: 140px;
   background: #fff;
   border: 1px solid #ddd;
-  padding: 10px 12px;
+  padding: 10px 14px;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .section-card .title {
