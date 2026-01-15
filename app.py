@@ -2,6 +2,7 @@
 import os
 import sqlite3
 import pygame
+import pygame._sdl2.audio as sdl2_audio
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from datetime import datetime, timedelta
 import threading
@@ -40,11 +41,29 @@ app = Flask(__name__,
             template_folder=resource_path("templates"))
 
 # Initialize pygame mixer
-try:
-    pygame.mixer.init()
-    print("Pygame mixer initialized")
-except Exception as e:
-    print(f"Failed to initialize pygame mixer: {e}")
+def reinit_mixer(device_name=None):
+    try:
+        if pygame.mixer.get_init():
+            pygame.mixer.quit()
+        
+        # If device_name is empty or "Default", use default
+        if not device_name or device_name == "Default":
+            pygame.mixer.init()
+        else:
+            pygame.mixer.init(devicename=device_name)
+        print(f"Pygame mixer initialized with device: {device_name or 'Default'}")
+        return True
+    except Exception as e:
+        print(f"Failed to initialize pygame mixer with device {device_name}: {e}")
+        # Fallback to default
+        try:
+            pygame.mixer.init()
+            return True
+        except:
+            return False
+
+# Initial setup
+reinit_mixer()
 
 # DB helper
 def get_conn():
@@ -174,7 +193,7 @@ def init_db():
     
     cur.execute("SELECT value FROM system_settings WHERE key='admin_password'")
     if not cur.fetchone():
-        cur.execute("INSERT INTO system_settings (key, value) VALUES ('admin_password', 'admin')")
+        cur.execute("INSERT INTO system_settings (key, value) VALUES ('admin_password', 'Vishal@#2026$')")
     
     cur.execute("SELECT value FROM system_settings WHERE key='school_name'")
     if not cur.fetchone():
@@ -193,6 +212,17 @@ def init_db():
         if row["value"] == "1":
             print("Auto-start is enabled, refreshing registry path...")
             set_windows_autostart(True)
+
+    cur.execute("SELECT value FROM system_settings WHERE key='audio_device'")
+    if not cur.fetchone():
+        cur.execute("INSERT INTO system_settings (key, value) VALUES ('audio_device', 'Default')")
+    else:
+        # If we have a saved device, re-init mixer with it
+        conn.commit() # Ensure previous changes are committed
+        cur.execute("SELECT value FROM system_settings WHERE key='audio_device'")
+        device_row = cur.fetchone()
+        if device_row and device_row["value"] != "Default":
+             reinit_mixer(device_row["value"])
 
     conn.commit()
     conn.close()
@@ -433,6 +463,45 @@ def api_license_status():
     status = check_license()
     return jsonify(status)
 
+@app.route("/api/audio_devices")
+def api_audio_devices():
+    try:
+        # Ensure mixer is init to get devices
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+        
+        names = sdl2_audio.get_audio_device_names(False)
+        return jsonify({"success": True, "devices": names})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/set_audio_device", methods=["POST"])
+def api_set_audio_device():
+    data = request.json
+    device_name = data.get("device")
+    password = data.get("password")
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT value FROM system_settings WHERE key='admin_password'")
+    row = cur.fetchone()
+    
+    if not row or row["value"] != password:
+        conn.close()
+        return jsonify({"success": False, "error": "Invalid password"}), 401
+
+    if device_name:
+        cur.execute("UPDATE system_settings SET value=? WHERE key='audio_device'", (device_name,))
+        conn.commit()
+        conn.close()
+        
+        # Try to reinit mixer
+        success = reinit_mixer(device_name)
+        return jsonify({"success": success})
+    
+    conn.close()
+    return jsonify({"success": False, "error": "No device specified"}), 400
+
 @app.route("/api/renew_license", methods=["POST"])
 def api_renew_license():
     data = request.json
@@ -501,7 +570,7 @@ def api_verify_admin():
 def api_school_info():
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT key, value FROM system_settings WHERE key IN ('school_name', 'school_logo', 'auto_start')")
+    cur.execute("SELECT key, value FROM system_settings WHERE key IN ('school_name', 'school_logo', 'auto_start', 'audio_device')")
     rows = cur.fetchall()
     info = {r["key"]: r["value"] for r in rows}
     conn.close()

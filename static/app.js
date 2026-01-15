@@ -504,6 +504,25 @@ async function verifyAdminSettings() {
 
       $("edit-school-name").value = info.school_name || "";
       $("edit-auto-start").checked = info.auto_start === "1";
+
+      // Fetch and populate audio devices
+      try {
+        const deviceRes = await fetch("/api/audio_devices");
+        const deviceJson = await deviceRes.json();
+        if (deviceJson.success) {
+          const select = $("edit-audio-device");
+          select.innerHTML = '<option value="Default">Default System Output</option>';
+          deviceJson.devices.forEach(dev => {
+            const opt = document.createElement("option");
+            opt.value = dev;
+            opt.innerText = dev;
+            if (dev === info.audio_device) opt.selected = true;
+            select.appendChild(opt);
+          });
+        }
+      } catch (de) {
+        console.warn("Failed to fetch audio devices", de);
+      }
     } else {
       msg.innerText = json.error || "Verification failed";
       msg.style.color = "red";
@@ -543,6 +562,20 @@ async function saveAdminSettings() {
         auto_start: $("edit-auto-start").checked ? "1" : "0"
       })
     });
+
+    // 3. Update Audio Device
+    const deviceSelect = $("edit-audio-device");
+    if (deviceSelect) {
+      await fetch("/api/set_audio_device", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: adminSettingsPassword,
+          device: deviceSelect.value
+        })
+      });
+    }
+
     const json = await res.json();
     if (json.success) {
       msg.innerText = "Settings saved! Reloading...";
