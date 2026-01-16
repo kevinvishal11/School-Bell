@@ -504,6 +504,7 @@ async function verifyAdminSettings() {
 
       $("edit-school-name").value = info.school_name || "";
       $("edit-auto-start").checked = info.auto_start === "1";
+      $("edit-lock-system-audio").checked = info.lock_system_audio === "1";
 
       // Fetch and populate audio devices
       try {
@@ -511,14 +512,17 @@ async function verifyAdminSettings() {
         const deviceJson = await deviceRes.json();
         if (deviceJson.success) {
           const select = $("edit-audio-device");
-          select.innerHTML = '<option value="Default">Default System Output</option>';
-          deviceJson.devices.forEach(dev => {
-            const opt = document.createElement("option");
-            opt.value = dev;
-            opt.innerText = dev;
-            if (dev === info.audio_device) opt.selected = true;
-            select.appendChild(opt);
-          });
+          const sysSelect = $("edit-system-audio-dev");
+
+          const optionsHtml = '<option value="Default">Default System Output</option>' +
+            deviceJson.devices.map(dev => `<option value="${dev}">${dev}</option>`).join("");
+
+          select.innerHTML = optionsHtml;
+          sysSelect.innerHTML = optionsHtml;
+
+          // Set selected values
+          select.value = info.audio_device || "Default";
+          sysSelect.value = info.system_audio_dev || "Default";
         }
       } catch (de) {
         console.warn("Failed to fetch audio devices", de);
@@ -559,7 +563,9 @@ async function saveAdminSettings() {
       body: JSON.stringify({
         password: adminSettingsPassword,
         school_name: name,
-        auto_start: $("edit-auto-start").checked ? "1" : "0"
+        auto_start: $("edit-auto-start").checked ? "1" : "0",
+        lock_system_audio: $("edit-lock-system-audio").checked ? "1" : "0",
+        system_audio_dev: $("edit-system-audio-dev") ? $("edit-system-audio-dev").value : "Default"
       })
     });
 

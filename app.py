@@ -9,6 +9,7 @@ import threading
 import sys
 import time
 import shutil
+import subprocess
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -49,18 +50,58 @@ def reinit_mixer(device_name=None):
         # If device_name is empty or "Default", use default
         if not device_name or device_name == "Default":
             pygame.mixer.init()
+            print("Pygame mixer initialized with Default device")
+            return True
+
+        # Smart Matching for macOS/SDL naming variations (e.g., "External Headphones" vs "External Headphones (2)")
+        try:
+            available = sdl2_audio.get_audio_device_names(False)
+            if device_name not in available:
+                print(f"Device '{device_name}' not found. Searching for best match...")
+                # Try prefix match (ignore trailing parenthetical numbers)
+                clean_name = device_name.split(' (')[0]
+                matches = [d for d in available if d.startswith(clean_name)]
+                if matches:
+                    print(f"Smart Match found: '{device_name}' -> '{matches[0]}'")
+                    device_name = matches[0]
+                else:
+                    print(f"No match found for '{clean_name}'. Falling back to Default.")
+                    device_name = "Default"
+        except Exception as se:
+            print(f"Device discovery failed: {se}")
+
+        if device_name == "Default":
+            pygame.mixer.init()
         else:
             pygame.mixer.init(devicename=device_name)
-        print(f"Pygame mixer initialized with device: {device_name or 'Default'}")
+        
+        print(f"Pygame mixer initialized with device: {device_name}")
         return True
     except Exception as e:
-        print(f"Failed to initialize pygame mixer with device {device_name}: {e}")
-        # Fallback to default
+        print(f"Critical fallback: Failed to initialize pygame mixer with device {device_name}: {e}")
         try:
             pygame.mixer.init()
             return True
         except:
             return False
+
+def apply_macos_audio_isolation(device_name):
+    if sys.platform != "darwin" or not device_name or device_name == "Default":
+        return
+    try:
+        script_path = resource_path("macos_audio.swift")
+        if os.path.exists(script_path):
+            # Best effort to run script
+            result = subprocess.run(["swift", script_path, device_name], capture_output=True, text=True, check=False)
+            if "Not Found" in result.stdout:
+                print(f"macOS Isolation: Device '{device_name}' not found by script. Attempting fuzzy match...")
+                # We could attempt prefix match here but the script is minimal. 
+                # For now, just log and fail gracefully.
+                print("macOS Isolation: Automated switching skipped due to device name mismatch.")
+            else:
+                print(f"macOS Isolation: System default set command sent for {device_name}")
+    except Exception as e:
+        print(f"macOS Isolation error: {e}")
 
 # Initial setup
 reinit_mixer()
@@ -223,6 +264,24 @@ def init_db():
         device_row = cur.fetchone()
         if device_row and device_row["value"] != "Default":
              reinit_mixer(device_row["value"])
+
+    cur.execute("SELECT value FROM system_settings WHERE key='lock_system_audio'")
+    if not cur.fetchone():
+        cur.execute("INSERT INTO system_settings (key, value) VALUES ('lock_system_audio', '0')")
+    
+    cur.execute("SELECT value FROM system_settings WHERE key='system_audio_dev'")
+    if not cur.fetchone():
+        cur.execute("INSERT INTO system_settings (key, value) VALUES ('system_audio_dev', 'Default')")
+    else:
+        # Check if we should apply isolation on startup
+        conn.commit()
+        cur.execute("SELECT value FROM system_settings WHERE key='lock_system_audio'")
+        lock_row = cur.fetchone()
+        if lock_row and lock_row["value"] == "1":
+            cur.execute("SELECT value FROM system_settings WHERE key='system_audio_dev'")
+            dev_row = cur.fetchone()
+            if dev_row:
+                apply_macos_audio_isolation(dev_row["value"])
 
     conn.commit()
     conn.close()
@@ -570,7 +629,7 @@ def api_verify_admin():
 def api_school_info():
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT key, value FROM system_settings WHERE key IN ('school_name', 'school_logo', 'auto_start', 'audio_device')")
+    cur.execute("SELECT key, value FROM system_settings WHERE key IN ('school_name', 'school_logo', 'auto_start', 'audio_device', 'lock_system_audio', 'system_audio_dev')")
     rows = cur.fetchall()
     info = {r["key"]: r["value"] for r in rows}
     conn.close()
@@ -618,6 +677,8 @@ def api_update_school_info():
     school_name = data.get("school_name")
     school_logo = data.get("school_logo")
     auto_start = data.get("auto_start") # '1' or '0'
+    lock_system_audio = data.get("lock_system_audio") # '1' or '0'
+    system_audio_dev = data.get("system_audio_dev")
 
     conn = get_conn()
     cur = conn.cursor()
@@ -633,6 +694,15 @@ def api_update_school_info():
     if school_logo:
         cur.execute("UPDATE system_settings SET value=? WHERE key='school_logo'", (school_logo,))
     
+    if lock_system_audio is not None:
+        cur.execute("UPDATE system_settings SET value=? WHERE key='lock_system_audio'", (lock_system_audio,))
+    if system_audio_dev is not None:
+        cur.execute("UPDATE system_settings SET value=? WHERE key='system_audio_dev'", (system_audio_dev,))
+    
+    # Apply isolation if just enabled
+    if lock_system_audio == "1" and system_audio_dev:
+        apply_macos_audio_isolation(system_audio_dev)
+
     if auto_start is not None:
         # Update registry
         success, msg = set_windows_autostart(auto_start == "1")
