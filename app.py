@@ -10,6 +10,7 @@ import sys
 import time
 import shutil
 import subprocess
+import windows_audio_utils
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -102,6 +103,88 @@ def apply_macos_audio_isolation(device_name):
                 print(f"macOS Isolation: System default set command sent for {device_name}")
     except Exception as e:
         print(f"macOS Isolation error: {e}")
+
+def play_sound_with_ducking(safe_path):
+    """Plays a sound and handles Windows ducking if necessary."""
+    def _wait_and_unduck():
+        while pygame.mixer.music.get_busy():
+            time.sleep(0.5)
+        windows_audio_utils.unduck_others()
+
+    try:
+        if pygame.mixer.get_init():
+            # Duck others if on Windows
+            if sys.platform == "win32":
+                windows_audio_utils.duck_others()
+            
+            pygame.mixer.music.load(safe_path)
+            pygame.mixer.music.play()
+            
+            # Start a thread to unduck when done
+            if sys.platform == "win32":
+                threading.Thread(target=_wait_and_unduck, daemon=True).start()
+            return True
+        else:
+            print("Mixer not initialized")
+            return False
+    except Exception as e:
+        print(f"Playback error: {e}")
+        # Always attempt to unduck on error
+        if sys.platform == "win32":
+            windows_audio_utils.unduck_others()
+        return False
+
+def show_notification(title, message):
+    """Shows a system-level notification on Mac or Windows."""
+    try:
+        if sys.platform == "darwin":
+            # Mac Notification via AppleScript
+            subprocess.run(["osascript", "-e", f'display notification "{message}" with title "{title}"'], check=False)
+        elif sys.platform == "win32":
+            # Windows Notification via PowerShell (More reliable than msg *)
+            ps_script = f'[reflection.assembly]::loadwithpartialname("System.Windows.Forms"); [reflection.assembly]::loadwithpartialname("System.Drawing"); \$notification = new-object system.windows.forms.notifyicon; \$notification.icon = [system.drawing.systemicons]::Information; \$notification.balloontipicon = "Info"; \$notification.balloontiptitle = "{title}"; \$notification.balloontiptext = "{message}"; \$notification.visible = \$true; \$notification.showballoontip(10000);'
+            subprocess.run(["powershell", "-Command", ps_script], check=False)
+        else:
+            print(f"Notification: {title} - {message}")
+    except Exception as e:
+        print(f"Failed to show notification: {e}")
+
+def audio_monitor_loop():
+    """Background thread to monitor if the selected audio device is unplugged."""
+    last_known_present = True
+    while True:
+        try:
+            time.sleep(10) # Check every 10 seconds to be lightweight
+            
+            conn = sqlite3.connect(DB_PATH)
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute("SELECT value FROM system_settings WHERE key='audio_device'")
+            row = cur.fetchone()
+            conn.close()
+            
+            if not row: continue
+            target = row["value"]
+            if not target or target == "Default":
+                last_known_present = True
+                continue
+            
+            # Check if target (or smart match) is present
+            available = sdl2_audio.get_audio_device_names(False)
+            clean_target = target.split(' (')[0]
+            is_present = any(d.startswith(clean_target) for d in available)
+            
+            if not is_present and last_known_present:
+                # Device just disappeared
+                show_notification("Audio Device Unplugged!", "Please reset your earphone/speaker settings in the School Bell Admin Panel.")
+                print(f"Audio Alert: '{target}' disappeared.")
+                last_known_present = False
+            elif is_present:
+                last_known_present = True
+                
+        except Exception as e:
+            print(f"Audio monitor loop error: {e}")
+            time.sleep(5)
 
 # Initial setup
 reinit_mixer()
@@ -233,8 +316,12 @@ def init_db():
         cur.execute("INSERT INTO system_settings (key, value) VALUES ('license_expiry', ?)", (expiry,))
     
     cur.execute("SELECT value FROM system_settings WHERE key='admin_password'")
-    if not cur.fetchone():
+    row = cur.fetchone()
+    if not row:
         cur.execute("INSERT INTO system_settings (key, value) VALUES ('admin_password', 'Vishal@#2026$')")
+    elif row["value"] == "admin":
+        # Upgrade from old default
+        cur.execute("UPDATE system_settings SET value='Vishal@#2026$' WHERE key='admin_password'")
     
     cur.execute("SELECT value FROM system_settings WHERE key='school_name'")
     if not cur.fetchone():
@@ -286,6 +373,9 @@ def init_db():
     conn.commit()
     conn.close()
     print("Database initialization complete.")
+    
+    # Start Audio Monitor
+    threading.Thread(target=audio_monitor_loop, daemon=True).start()
 
 def init_license_db():
     # Deprecated: use init_db() instead. Keeping for backward compatibility if needed.
@@ -446,14 +536,10 @@ def api_play_slot(slot_id):
 
         url = f"/sounds/{filename}"
         
-        # Play on server (Raspberry Pi)
+        # Play on server (Raspberry Pi / Windows)
         try:
             print(f"Playing on server: {safe_path}")
-            if pygame.mixer.get_init():
-                pygame.mixer.music.load(safe_path)
-                pygame.mixer.music.play()
-            else:
-                print("Pygame mixer not initialized")
+            play_sound_with_ducking(safe_path)
         except Exception as e:
             print(f"Server playback error: {e}")
 
@@ -812,12 +898,8 @@ def scheduler_loop():
                             if os.path.exists(safe_path):
                                 print(f"Scheduler playing: {safe_path}")
                                 try:
-                                    if pygame.mixer.get_init():
-                                        pygame.mixer.music.load(safe_path)
-                                        pygame.mixer.music.play()
+                                    if play_sound_with_ducking(safe_path):
                                         played = True
-                                    else:
-                                        print("Scheduler: Pygame mixer not initialized")
                                 except Exception as e:
                                     print(f"Scheduler playback error: {e}")
                             else:
