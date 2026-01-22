@@ -859,18 +859,29 @@ def serve_logo(filename):
 def scheduler_loop():
     print("Scheduler thread started")
     last_minute = None
+    last_lic_check = 0
+    lic_status = "active"
+
     while True:
         try:
             now = datetime.now()
+            # Check license every 5s
+            if time.time() - last_lic_check > 5:
+                lic = check_license()
+                lic_status = lic["status"]
+                last_lic_check = time.time()
+                
+                if lic_status == "expired":
+                    if pygame.mixer.get_init() and pygame.mixer.music.get_busy():
+                        print("License expired. Stopping bell.")
+                        pygame.mixer.music.stop()
+
+            if lic_status == "expired":
+                time.sleep(1)
+                continue
+
             current_hm = now.strftime("%H:%M")
             if current_hm != last_minute:
-                # Check license first
-                lic = check_license()
-                if lic["status"] == "expired":
-                    print("License expired. Skipping scheduler.")
-                    last_minute = current_hm
-                    time.sleep(1)
-                    continue
 
                 # New minute, check for alarms
                 conn = get_conn()
