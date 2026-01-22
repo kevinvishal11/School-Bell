@@ -111,6 +111,7 @@
       <div class="toprow">
         <div>Current time: <span id="now">--:--:--</span></div>
         <div class="top-actions">
+          <button onclick="openAudioSettingsModal()" style="background:#6c757d;">🔊 Audio Settings</button>
           <button onclick="openAdminSettings()" class="admin-edit-btn">⚙️ Admin Settings</button>
           <button onclick="openLicenseModal()">Set License Date</button>
           <button onclick="stopSound()" class="danger">Stop Sound</button>
@@ -118,7 +119,32 @@
       </div>
     </header>
 
-    <!-- Admin Settings Modal -->
+    <!-- Audio Settings Modal -->
+    <div id="audio-settings-modal" class="license-overlay" style="display:none;">
+      <div class="overlay-content" style="max-width: 400px; width: 90%;">
+        <h1>Audio Settings</h1>
+        <div style="margin-bottom:20px; text-align:left;">
+          <label style="display:block; margin-bottom:5px; font-weight:bold;">Bell Output Device:</label>
+          <select id="audio-settings-bell-dev"
+            style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;"></select>
+          <small style="color:#666; display:block; margin-top:5px;">Where the school bell will play.</small>
+        </div>
+
+        <div style="margin-bottom:20px; text-align:left;">
+          <label style="display:block; margin-bottom:5px; font-weight:bold;">Force System Audio (Mac):</label>
+          <select id="audio-settings-system-dev"
+            style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;"></select>
+          <small style="color:#666; display:block; margin-top:5px;">Forces Chrome/YouTube etc. to the selected
+            device.</small>
+        </div>
+
+        <div id="audio-settings-msg"></div>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+          <button onclick="saveAudioSettings()" style="background:#28a745; flex:1;">Save Settings</button>
+          <button onclick="closeAudioSettingsModal()" style="background:#6c757d; flex:1;">Close</button>
+        </div>
+      </div>
+    </div>
     <div id="admin-settings-modal" class="license-overlay" style="display:none;">
       <div class="overlay-content">
         <h1>Admin Settings</h1>
@@ -136,20 +162,6 @@
           <div style="margin-bottom:15px; text-align:left;">
             <label>School Logo:</label><br>
             <input type="file" id="edit-school-logo" accept="image/*" style="margin-top:5px;">
-          </div>
-          <div style="margin-bottom:15px; text-align:left;">
-            <label>Audio Output Device:</label><br>
-            <select id="edit-audio-device"
-              style="width:100%; box-sizing:border-box; margin-top:5px; padding:5px;"></select>
-          </div>
-          <div style="margin-bottom:15px; text-align:left;">
-            <label>
-              <input type="checkbox" id="edit-lock-system-audio"> Lock System Audio (Force other apps to):
-            </label>
-            <select id="edit-system-audio-dev"
-              style="width:100%; box-sizing:border-box; margin-top:5px; padding:5px;"></select>
-            <small style="color:#666; font-size:0.8rem;">Forces Chrome/YouTube etc. to the selected device on
-              Mac.</small>
           </div>
           <div style="margin-bottom:15px; text-align:left;">
             <label>

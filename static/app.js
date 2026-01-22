@@ -461,9 +461,9 @@ async function fetchSchoolInfo() {
     const json = await r.json();
     if (json.school_name) {
       $("display-name").innerText = json.school_name;
-      //  if ($("footer-school-name")) $("footer-school-name").innerText = json.school_name;
     }
     if (json.school_logo) $("display-logo").src = json.school_logo;
+
   } catch (e) {
     console.warn("fetchSchoolInfo failed", e);
   }
@@ -504,35 +504,82 @@ async function verifyAdminSettings() {
 
       $("edit-school-name").value = info.school_name || "";
       $("edit-auto-start").checked = info.auto_start === "1";
-      $("edit-lock-system-audio").checked = info.lock_system_audio === "1";
-
-      // Fetch and populate audio devices
-      try {
-        const deviceRes = await fetch("/api/audio_devices");
-        const deviceJson = await deviceRes.json();
-        if (deviceJson.success) {
-          const select = $("edit-audio-device");
-          const sysSelect = $("edit-system-audio-dev");
-
-          const optionsHtml = '<option value="Default">Default System Output</option>' +
-            deviceJson.devices.map(dev => `<option value="${dev}">${dev}</option>`).join("");
-
-          select.innerHTML = optionsHtml;
-          sysSelect.innerHTML = optionsHtml;
-
-          // Set selected values
-          select.value = info.audio_device || "Default";
-          sysSelect.value = info.system_audio_dev || "Default";
-        }
-      } catch (de) {
-        console.warn("Failed to fetch audio devices", de);
-      }
     } else {
       msg.innerText = json.error || "Verification failed";
       msg.style.color = "red";
     }
   } catch (e) {
     msg.innerText = "Error: " + e;
+    msg.style.color = "red";
+  }
+}
+
+async function openAudioSettingsModal() {
+  const modal = $("audio-settings-modal");
+  modal.style.display = "flex";
+  const msg = $("audio-settings-msg");
+  msg.innerText = "Loading devices...";
+  msg.style.color = "white";
+
+  try {
+    const infoRes = await fetch("/api/school_info");
+    const info = await infoRes.json();
+
+    const deviceRes = await fetch("/api/audio_devices");
+    const deviceJson = await deviceRes.json();
+
+    if (deviceJson.success) {
+      const bellSelect = $("audio-settings-bell-dev");
+      const sysSelect = $("audio-settings-system-dev");
+
+      const optionsHtml = '<option value="Default">Default System Output</option>' +
+        deviceJson.devices.map(dev => `<option value="${dev}">${dev}</option>`).join("");
+
+      bellSelect.innerHTML = optionsHtml;
+      sysSelect.innerHTML = optionsHtml;
+
+      bellSelect.value = info.audio_device || "Default";
+      sysSelect.value = info.system_audio_dev || "Default";
+      msg.innerText = "";
+    }
+  } catch (e) {
+    msg.innerText = "Error loading settings: " + e.message;
+    msg.style.color = "red";
+  }
+}
+
+function closeAudioSettingsModal() {
+  $("audio-settings-modal").style.display = "none";
+}
+
+async function saveAudioSettings() {
+  const bellDev = $("audio-settings-bell-dev").value;
+  const sysDev = $("audio-settings-system-dev").value;
+  const msg = $("audio-settings-msg");
+
+  msg.innerText = "Saving...";
+  msg.style.color = "white";
+
+  try {
+    // 1. Update Bell Device
+    await fetch("/api/set_audio_device", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ device: bellDev })
+    });
+
+    // 2. Update System Audio Isolation
+    await fetch("/api/set_system_audio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ device: sysDev })
+    });
+
+    msg.innerText = "Audio settings saved!";
+    msg.style.color = "lightgreen";
+    setTimeout(() => closeAudioSettingsModal(), 1000);
+  } catch (e) {
+    msg.innerText = "Error saving: " + e.message;
     msg.style.color = "red";
   }
 }
@@ -556,31 +603,16 @@ async function saveAdminSettings() {
       if (!logoJson.success) throw new Error(logoJson.error || "Logo upload failed");
     }
 
-    // 2. Update name
+    // 2. Update Metadata
     const res = await fetch("/api/update_school_info", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         password: adminSettingsPassword,
         school_name: name,
-        auto_start: $("edit-auto-start").checked ? "1" : "0",
-        lock_system_audio: $("edit-lock-system-audio").checked ? "1" : "0",
-        system_audio_dev: $("edit-system-audio-dev") ? $("edit-system-audio-dev").value : "Default"
+        auto_start: $("edit-auto-start").checked ? "1" : "0"
       })
     });
-
-    // 3. Update Audio Device
-    const deviceSelect = $("edit-audio-device");
-    if (deviceSelect) {
-      await fetch("/api/set_audio_device", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          password: adminSettingsPassword,
-          device: deviceSelect.value
-        })
-      });
-    }
 
     const json = await res.json();
     if (json.success) {

@@ -142,7 +142,7 @@ def show_notification(title, message):
             subprocess.run(["osascript", "-e", f'display notification "{message}" with title "{title}"'], check=False)
         elif sys.platform == "win32":
             # Windows Notification via PowerShell (More reliable than msg *)
-            ps_script = f'[reflection.assembly]::loadwithpartialname("System.Windows.Forms"); [reflection.assembly]::loadwithpartialname("System.Drawing"); \$notification = new-object system.windows.forms.notifyicon; \$notification.icon = [system.drawing.systemicons]::Information; \$notification.balloontipicon = "Info"; \$notification.balloontiptitle = "{title}"; \$notification.balloontiptext = "{message}"; \$notification.visible = \$true; \$notification.showballoontip(10000);'
+            ps_script = fr'[reflection.assembly]::loadwithpartialname("System.Windows.Forms"); [reflection.assembly]::loadwithpartialname("System.Drawing"); $notification = new-object system.windows.forms.notifyicon; $notification.icon = [system.drawing.systemicons]::Information; $notification.balloontipicon = "Info"; $notification.balloontiptitle = "{title}"; $notification.balloontiptext = "{message}"; $notification.visible = $true; $notification.showballoontip(10000);'
             subprocess.run(["powershell", "-Command", ps_script], check=False)
         else:
             print(f"Notification: {title} - {message}")
@@ -624,17 +624,10 @@ def api_audio_devices():
 def api_set_audio_device():
     data = request.json
     device_name = data.get("device")
-    password = data.get("password")
 
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT value FROM system_settings WHERE key='admin_password'")
-    row = cur.fetchone()
     
-    if not row or row["value"] != password:
-        conn.close()
-        return jsonify({"success": False, "error": "Invalid password"}), 401
-
     if device_name:
         cur.execute("UPDATE system_settings SET value=? WHERE key='audio_device'", (device_name,))
         conn.commit()
@@ -801,6 +794,29 @@ def api_update_school_info():
     conn.commit()
     conn.close()
     return jsonify({"success": True})
+
+@app.route("/api/set_system_audio", methods=["POST"])
+def api_set_system_audio():
+    data = request.json
+    device_name = data.get("device")
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    if device_name:
+        lock = "1" if device_name != "Default" else "0"
+        cur.execute("UPDATE system_settings SET value=? WHERE key='lock_system_audio'", (lock,))
+        cur.execute("UPDATE system_settings SET value=? WHERE key='system_audio_dev'", (device_name,))
+        conn.commit()
+        conn.close()
+        
+        if lock == "1":
+            apply_macos_audio_isolation(device_name)
+            
+        return jsonify({"success": True})
+    
+    conn.close()
+    return jsonify({"success": False, "error": "No device specified"}), 400
 
 @app.route("/api/upload_logo", methods=["POST"])
 def api_upload_logo():
