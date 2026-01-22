@@ -11,6 +11,18 @@ function $(id) {
   return document.getElementById(id);
 }
 
+function togglePasswordVisibility(inputId, iconId) {
+  const input = $(inputId);
+  const icon = $(iconId);
+  if (input.type === "password") {
+    input.type = "text";
+    icon.innerText = "Hide";
+  } else {
+    input.type = "password";
+    icon.innerText = "👁️";
+  }
+}
+
 function toggleCollapse(containerId) {
   const container = $(containerId);
   const content = container.querySelector(".collapsible-content");

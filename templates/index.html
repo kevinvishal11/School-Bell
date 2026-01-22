@@ -91,8 +91,13 @@
       <!-- Step 1: Authentication -->
       <div id="renew-step-1">
         <p>Please enter admin password to begin renewal.</p>
-        <input type="password" id="renew-admin-pass" placeholder="Admin Password">
-        <button onclick="renewVerify()">Next</button>
+        <div class="password-wrapper" style="position:relative; max-width:100%;">
+          <input type="password" id="renew-admin-pass" placeholder="Admin Password"
+            style="width:100%; box-sizing:border-box; padding-right:40px;">
+          <span id="toggle-renew-pass" onclick="togglePasswordVisibility('renew-admin-pass', 'toggle-renew-pass')"
+            style="position:absolute; right:10px; top:50%; transform:translateY(-50%); cursor:pointer; color:#777;">👁️</span>
+        </div>
+        <button onclick="renewVerify()" style="margin-top:10px;">Next</button>
       </div>
 
       <!-- Step 2: Date Selection -->
@@ -150,8 +155,13 @@
         <h1>Admin Settings</h1>
         <div id="admin-settings-auth">
           <p>Please enter admin password to continue.</p>
-          <input type="password" id="admin-settings-pass" placeholder="Admin Password">
-          <button onclick="verifyAdminSettings()">Next</button>
+          <div class="password-wrapper" style="position:relative; max-width:100%;">
+            <input type="password" id="admin-settings-pass" placeholder="Admin Password"
+              style="width:100%; box-sizing:border-box; padding-right:40px;">
+            <span id="toggle-admin-pass" onclick="togglePasswordVisibility('admin-settings-pass', 'toggle-admin-pass')"
+              style="position:absolute; right:10px; top:50%; transform:translateY(-50%); cursor:pointer; color:#777;">👁️</span>
+          </div>
+          <button onclick="verifyAdminSettings()" style="margin-top:10px;">Next</button>
         </div>
         <div id="admin-settings-form" style="display:none;">
           <p>Update School Information</p>
@@ -192,8 +202,13 @@
       <div class="overlay-content">
         <h1>Admin Authentication</h1>
         <p>Please enter admin password to continue.</p>
-        <input type="password" id="auth-pass" placeholder="Admin Password">
-        <button onclick="verifyAndNext()">Next</button>
+        <div class="password-wrapper" style="position:relative; max-width:100%;">
+          <input type="password" id="auth-pass" placeholder="Admin Password"
+            style="width:100%; box-sizing:border-box; padding-right:40px;">
+          <span id="toggle-auth-pass" onclick="togglePasswordVisibility('auth-pass', 'toggle-auth-pass')"
+            style="position:absolute; right:10px; top:50%; transform:translateY(-50%); cursor:pointer; color:#777;">👁️</span>
+        </div>
+        <button onclick="verifyAndNext()" style="margin-top:10px;">Next</button>
         <button onclick="closeModals()" style="background:#555; margin-top:10px;">Cancel</button>
         <div id="auth-msg"></div>
       </div>
