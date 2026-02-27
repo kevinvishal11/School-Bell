@@ -5,7 +5,7 @@
 #define MyAppVersion "1.5"
 #define MyAppPublisher "TeaTalk"
 #define MyAppExeName "SchoolBell.exe"
-#define MyOutputDir "dist\SchoolBell"
+#define MyOutputDir "dist"
 
 [Setup]
 AppId={{7B8B1A2C-5F9D-4E3E-A5B2-D4C5E6F7A8B9}
@@ -31,8 +31,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "startupicon"; Description: "Launch School Bell on system startup"; GroupDescription: "Auto-Start:"; Flags: unchecked
 
 [Files]
-; Copy the ENTIRE folder from dist\SchoolBell
-Source: "{#MyOutputDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Copy the single executable from dist
+Source: "{#MyOutputDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
