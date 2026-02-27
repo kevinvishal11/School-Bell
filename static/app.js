@@ -516,6 +516,18 @@ async function verifyAdminSettings() {
 
       $("edit-school-name").value = info.school_name || "";
       $("edit-auto-start").checked = info.auto_start === "1";
+
+      // Fetch Device info for pairing
+      try {
+        const dRes = await fetch("/api/device_info");
+        const dJson = await dRes.json();
+        if (dJson.device_id) {
+          $("admin-device-id").value = dJson.device_id;
+          $("admin-device-qr").src = "/api/device_qr?v=" + new Date().getTime(); // cache bust
+        }
+      } catch (de) {
+        console.warn("Could not fetch device info", de);
+      }
     } else {
       msg.innerText = json.error || "Verification failed";
       msg.style.color = "red";
@@ -639,6 +651,14 @@ async function saveAdminSettings() {
     msg.innerText = "Error: " + e.message;
     msg.style.color = "red";
   }
+}
+
+function copyAdminDeviceId() {
+  const copyText = $("admin-device-id");
+  copyText.select();
+  copyText.setSelectionRange(0, 99999); // For mobile devices
+  navigator.clipboard.writeText(copyText.value);
+  alert("Device ID copied to clipboard!");
 }
 
 // Section Renaming

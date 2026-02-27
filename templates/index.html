@@ -165,22 +165,54 @@
         </div>
         <div id="admin-settings-form" style="display:none;">
           <p>Update School Information</p>
-          <div style="margin-bottom:15px; text-align:left;">
-            <label>School Name:</label><br>
-            <input type="text" id="edit-school-name" style="width:100%; box-sizing:border-box; margin-top:5px;">
+          <div style="display: flex; gap: 30px; align-items: flex-start;">
+            <!-- Left Column: Settings -->
+            <div style="flex: 1; text-align: left;">
+              <div style="margin-bottom: 15px;">
+                <label>School Name:</label><br>
+                <input type="text" id="edit-school-name" style="width:100%; box-sizing:border-box; margin-top:5px;">
+              </div>
+              <div style="margin-bottom: 15px;">
+                <label>School Logo:</label><br>
+                <input type="file" id="edit-school-logo" accept="image/*" style="margin-top:5px;">
+              </div>
+              <div style="margin-bottom: 20px;">
+                <label>
+                  <input type="checkbox" id="edit-auto-start"> Start with Windows
+                </label>
+              </div>
+              <button onclick="saveAdminSettings()" style="width: 100%;">Save Changes</button>
+            </div>
+
+            <!-- Right Column: Device Pairing -->
+            <div style="flex: 1; min-width: 250px;">
+              <div
+                style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid #444;">
+                <h3 style="margin-bottom: 15px; font-size: 1rem;">Device Pair Info</h3>
+
+                <label
+                  style="display:block; margin-bottom:5px; font-weight:bold; font-size: 0.8rem; text-align: left;">Device
+                  ID:</label>
+                <div style="display: flex; gap: 5px; margin-bottom: 15px;">
+                  <input type="text" id="admin-device-id" readonly
+                    style="flex: 1; background: #222; border: 1px solid #444; color: #eee; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 0.8rem;">
+                  <button onclick="copyAdminDeviceId()"
+                    style="padding: 5px 10px; font-size: 0.8rem; width: auto;">Copy</button>
+                </div>
+
+                <label
+                  style="display:block; margin-bottom:10px; font-weight:bold; font-size: 0.8rem; text-align: left;">Scan
+                  QR Code:</label>
+                <div style="background: white; padding: 10px; display: inline-block; border-radius: 4px;">
+                  <img id="admin-device-qr" src="" alt="QR Code" style="display: block; width: 180px; height: 180px;">
+                </div>
+                <p style="font-size: 0.75rem; color: #aaa; margin-top: 10px;">Includes: Device ID, School Name, Expiry
+                </p>
+              </div>
+            </div>
           </div>
-          <div style="margin-bottom:15px; text-align:left;">
-            <label>School Logo:</label><br>
-            <input type="file" id="edit-school-logo" accept="image/*" style="margin-top:5px;">
-          </div>
-          <div style="margin-bottom:15px; text-align:left;">
-            <label>
-              <input type="checkbox" id="edit-auto-start"> Start with Windows
-            </label>
-          </div>
-          <button onclick="saveAdminSettings()">Save Changes</button>
         </div>
-        <button onclick="closeModals()" style="background:#555; margin-top:10px;">Cancel</button>
+        <button onclick="closeModals()" style="background:#555; margin-top:20px;">Close Settings</button>
         <div id="admin-settings-msg"></div>
       </div>
     </div>

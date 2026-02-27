@@ -20,24 +20,27 @@ else:
     icon_path = None
 
 # Command to run PyInstaller
-# --onedir: Standard professional folder structure
+# --onefile: Output a single .exe build as requested
 # --noupx: DISABLING UPX to fix "Failed to load Python DLL" on Windows 11
-# --noconsole: Hide the console window now that DLL issue is fixed
+# --noconsole: Hide the console window
 CONSOLE_FLAG = "--noconsole" 
 
 cmd = [
     "pyinstaller",
     "--clean",
-    "--onedir",
+    "--onefile",
     "--noupx",
     CONSOLE_FLAG,
     "--name", APP_NAME,
     "--collect-all", "webview",
     "--collect-all", "pystray",
     "--collect-all", "PIL",
+    "--collect-all", "qrcode",
     "--hidden-import", "clr",
     "--hidden-import", "pystray",
     "--hidden-import", "PIL.Image",
+    "--hidden-import", "qrcode",
+    "--hidden-import", "tkinter",
 ]
 
 if icon_path and os.path.exists(icon_path):

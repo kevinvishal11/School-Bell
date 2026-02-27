@@ -44,6 +44,11 @@ if __name__ == "__main__":
         # Import app logic
         print("Loading application modules...")
         from app import app, init_db, scheduler_loop, get_writable_dir
+        from device_manager import DeviceManager
+        
+        # Initialize Device Manager (Ensures ID exists)
+        dm = DeviceManager()
+        print(f"Device ID: {dm.get_device_id()}")
         
         WDIR = get_writable_dir()
         print(f"Data folder: {WDIR}")
@@ -98,8 +103,20 @@ if __name__ == "__main__":
         if pystray and os.path.exists(icon_path):
             try:
                 image = Image.open(icon_path)
+                def show_device_info_ui(icon, item):
+                    from device_ui import DeviceInfoWindow
+                    # Launch in a separate thread to not block tray
+                    def _launch():
+                        try:
+                            app = DeviceInfoWindow()
+                            app.run()
+                        except Exception as e:
+                            print(f"UI Error: {e}")
+                    threading.Thread(target=_launch, daemon=True).start()
+
                 menu = pystray.Menu(
                     item('Open Control Panel', show_window, default=True),
+                    item('Show Device Info', show_device_info_ui),
                     item('Exit', quit_app)
                 )
                 tray_icon = pystray.Icon("SchoolBell", image, "School Bell System", menu)

@@ -11,6 +11,13 @@ import time
 import shutil
 import subprocess
 import windows_audio_utils
+import json
+import io
+import qrcode
+from device_manager import DeviceManager
+
+# Device ID Manager
+device_mgr = DeviceManager()
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -607,6 +614,62 @@ def api_active_alarms():
 def api_license_status():
     status = check_license()
     return jsonify(status)
+
+@app.route("/api/device_info")
+def api_device_info():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT key, value FROM system_settings WHERE key IN ('school_name', 'license_expiry')")
+    rows = cur.fetchall()
+    info = {r["key"]: r["value"] for r in rows}
+    conn.close()
+    
+    payload = {
+        "app": "school-bell",
+        "device_id": device_mgr.get_device_id(),
+        "school_name": info.get("school_name", ""),
+        "expiry": info.get("license_expiry", "")
+    }
+    
+    return jsonify({
+        "device_id": device_mgr.get_device_id(),
+        "qr_payload": json.dumps(payload)
+    })
+
+@app.route("/api/device_qr")
+def api_device_qr():
+    from flask import send_file
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT key, value FROM system_settings WHERE key IN ('school_name', 'license_expiry')")
+    rows = cur.fetchall()
+    info = {r["key"]: r["value"] for r in rows}
+    conn.close()
+
+    payload = {
+        "app": "school-bell",
+        "device_id": device_mgr.get_device_id(),
+        "school_name": info.get("school_name", ""),
+        "expiry": info.get("license_expiry", "")
+    }
+    qr_payload = json.dumps(payload)
+    
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(qr_payload)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    img_io = io.BytesIO()
+    img.save(img_io, 'PNG')
+    img_io.seek(0)
+    
+    return send_file(img_io, mimetype='image/png')
 
 @app.route("/api/audio_devices")
 def api_audio_devices():
