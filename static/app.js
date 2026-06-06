@@ -380,7 +380,7 @@ async function refreshActive() {
     const s = it.slot;
     const el = document.createElement("div");
     el.style.padding = "6px 0";
-    el.innerHTML = `<strong>${s.section_name} — slot ${s.slot_no}</strong> at ${formatTime12(s.time)} (in ${it.minutes_from_now} min) — next: ${it.next_at}`;
+    el.innerHTML = `<strong>${s.section_name} — slot ${s.slot_no}</strong> at ${formatTime12(s.time)}`;
     target.appendChild(el);
   });
 }
