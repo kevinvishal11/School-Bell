@@ -686,10 +686,17 @@ def api_audio_devices():
 @app.route("/api/set_audio_device", methods=["POST"])
 def api_set_audio_device():
     data = request.json
+    password = data.get("password")
     device_name = data.get("device")
 
     conn = get_conn()
     cur = conn.cursor()
+    cur.execute("SELECT value FROM system_settings WHERE key='admin_password'")
+    row = cur.fetchone()
+    
+    if not row or row["value"] != password:
+        conn.close()
+        return jsonify({"success": False, "error": "Invalid password"}), 401
     
     if device_name:
         cur.execute("UPDATE system_settings SET value=? WHERE key='audio_device'", (device_name,))
@@ -861,10 +868,17 @@ def api_update_school_info():
 @app.route("/api/set_system_audio", methods=["POST"])
 def api_set_system_audio():
     data = request.json
+    password = data.get("password")
     device_name = data.get("device")
 
     conn = get_conn()
     cur = conn.cursor()
+    cur.execute("SELECT value FROM system_settings WHERE key='admin_password'")
+    row = cur.fetchone()
+    
+    if not row or row["value"] != password:
+        conn.close()
+        return jsonify({"success": False, "error": "Invalid password"}), 401
 
     if device_name:
         lock = "1" if device_name != "Default" else "0"

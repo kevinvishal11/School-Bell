@@ -538,9 +538,45 @@ async function verifyAdminSettings() {
   }
 }
 
-async function openAudioSettingsModal() {
-  const modal = $("audio-settings-modal");
-  modal.style.display = "flex";
+let audioSettingsPassword = null;
+
+function openAudioSettingsModal() {
+  $("audio-settings-modal").style.display = "flex";
+  $("audio-settings-auth").style.display = "block";
+  $("audio-settings-form").style.display = "none";
+  $("audio-settings-pass").value = "";
+  $("audio-settings-auth-msg").innerText = "";
+  audioSettingsPassword = null;
+}
+
+async function verifyAudioSettings() {
+  const pwd = $("audio-settings-pass").value;
+  const msg = $("audio-settings-auth-msg");
+  msg.innerText = "Verifying...";
+  try {
+    const res = await fetch("/api/verify_admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pwd })
+    });
+    const json = await res.json();
+    if (json.success) {
+      audioSettingsPassword = pwd;
+      $("audio-settings-auth").style.display = "none";
+      $("audio-settings-form").style.display = "block";
+      msg.innerText = "";
+      await loadAudioSettingsDevices();
+    } else {
+      msg.innerText = json.error || "Verification failed";
+      msg.style.color = "red";
+    }
+  } catch (e) {
+    msg.innerText = "Error: " + e;
+    msg.style.color = "red";
+  }
+}
+
+async function loadAudioSettingsDevices() {
   const msg = $("audio-settings-msg");
   msg.innerText = "Loading devices...";
   msg.style.color = "white";
@@ -589,14 +625,14 @@ async function saveAudioSettings() {
     await fetch("/api/set_audio_device", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ device: bellDev })
+      body: JSON.stringify({ password: audioSettingsPassword, device: bellDev })
     });
 
     // 2. Update System Audio Isolation
     await fetch("/api/set_system_audio", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ device: sysDev })
+      body: JSON.stringify({ password: audioSettingsPassword, device: sysDev })
     });
 
     msg.innerText = "Audio settings saved!";

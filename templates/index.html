@@ -128,25 +128,41 @@
     <div id="audio-settings-modal" class="license-overlay" style="display:none;">
       <div class="overlay-content" style="max-width: 400px; width: 90%;">
         <h1>Audio Settings</h1>
-        <div style="margin-bottom:20px; text-align:left;">
-          <label style="display:block; margin-bottom:5px; font-weight:bold;">Bell Output Device:</label>
-          <select id="audio-settings-bell-dev"
-            style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;"></select>
-          <small style="color:#666; display:block; margin-top:5px;">Where the school bell will play.</small>
+        
+        <div id="audio-settings-auth">
+          <p>Please enter admin password to continue.</p>
+          <div class="password-wrapper" style="position:relative; max-width:100%;">
+            <input type="password" id="audio-settings-pass" placeholder="Admin Password"
+              style="width:100%; box-sizing:border-box; padding-right:40px;">
+            <span id="toggle-audio-pass" onclick="togglePasswordVisibility('audio-settings-pass', 'toggle-audio-pass')"
+              style="position:absolute; right:10px; top:50%; transform:translateY(-50%); cursor:pointer; color:#777;">👁️</span>
+          </div>
+          <button onclick="verifyAudioSettings()" style="margin-top:10px;">Next</button>
+          <button onclick="closeAudioSettingsModal()" style="background:#555; margin-top:10px;">Cancel</button>
+          <div id="audio-settings-auth-msg" style="margin-top:10px;"></div>
         </div>
 
-        <div style="margin-bottom:20px; text-align:left;">
-          <label style="display:block; margin-bottom:5px; font-weight:bold;">Force System Audio (Mac):</label>
-          <select id="audio-settings-system-dev"
-            style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;"></select>
-          <small style="color:#666; display:block; margin-top:5px;">Forces Chrome/YouTube etc. to the selected
-            device.</small>
-        </div>
+        <div id="audio-settings-form" style="display:none;">
+          <div style="margin-bottom:20px; text-align:left;">
+            <label style="display:block; margin-bottom:5px; font-weight:bold;">Bell Output Device:</label>
+            <select id="audio-settings-bell-dev"
+              style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;"></select>
+            <small style="color:#666; display:block; margin-top:5px;">Where the school bell will play.</small>
+          </div>
 
-        <div id="audio-settings-msg"></div>
-        <div style="display:flex; gap:10px; margin-top:10px;">
-          <button onclick="saveAudioSettings()" style="background:#28a745; flex:1;">Save Settings</button>
-          <button onclick="closeAudioSettingsModal()" style="background:#6c757d; flex:1;">Close</button>
+          <div style="margin-bottom:20px; text-align:left;">
+            <label style="display:block; margin-bottom:5px; font-weight:bold;">Force System Audio (Mac):</label>
+            <select id="audio-settings-system-dev"
+              style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;"></select>
+            <small style="color:#666; display:block; margin-top:5px;">Forces Chrome/YouTube etc. to the selected
+              device.</small>
+          </div>
+
+          <div id="audio-settings-msg"></div>
+          <div style="display:flex; gap:10px; margin-top:10px;">
+            <button onclick="saveAudioSettings()" style="background:#28a745; flex:1;">Save Settings</button>
+            <button onclick="closeAudioSettingsModal()" style="background:#6c757d; flex:1;">Close</button>
+          </div>
         </div>
       </div>
     </div>

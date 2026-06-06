@@ -3,12 +3,14 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = [('templates', 'templates'), ('static', 'static'), ('sounds', 'sounds')]
 binaries = []
-hiddenimports = ['clr', 'pystray', 'PIL.Image']
+hiddenimports = ['pystray', 'PIL.Image', 'qrcode', 'tkinter']
 tmp_ret = collect_all('webview')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('pystray')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('PIL')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('qrcode')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
@@ -36,8 +38,8 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=False,
-    console=True,
+    upx=True,
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
@@ -50,7 +52,13 @@ coll = COLLECT(
     a.binaries,
     a.datas,
     strip=False,
-    upx=False,
+    upx=True,
     upx_exclude=[],
     name='SchoolBell',
+)
+app = BUNDLE(
+    coll,
+    name='SchoolBell.app',
+    icon='icon.png',
+    bundle_identifier=None,
 )
