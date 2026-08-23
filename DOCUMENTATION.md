@@ -1,4 +1,4 @@
-# School Bell App - Developer & Build Documentation
+# School Bell App - Developer & Build Documentation updated
 
 This documentation provides instructions on how to set up the development environment, run the app locally, build the Windows executable, and generate the installation package.
 
